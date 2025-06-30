@@ -22,7 +22,7 @@ import {
   BarChartOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -43,11 +43,11 @@ const Statistics = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const schedulesData = localStorageService.getDutySchedules();
-    const employeesData = localStorageService.getEmployees();
-    const statusRecordsData = localStorageService.getEmployeeStatusRecords();
-    const settingsData = localStorageService.getSettings();
+  const loadData = async () => {
+    const schedulesData = await hybridStorageService.getDutySchedules();
+    const employeesData = await hybridStorageService.getEmployees();
+    const statusRecordsData = await hybridStorageService.getEmployeeStatusRecords();
+    const settingsData = await hybridStorageService.getSettings();
     
     setDutySchedules(schedulesData);
     setEmployees(employeesData);

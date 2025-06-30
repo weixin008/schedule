@@ -32,9 +32,8 @@ import {
   CalendarOutlined,
   CheckCircleOutlined
 } from '@ant-design/icons';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
-const { TabPane } = Tabs;
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
@@ -62,7 +61,7 @@ const SystemConfiguration = () => {
   }, []);
 
   const loadConfiguration = () => {
-    const settings = localStorageService.getSettings();
+    const settings = hybridStorageService.getSettings();
     const loadedConfig = settings?.systemConfiguration || {};
     const defaultConfig = getDefaultConfiguration();
 
@@ -210,12 +209,12 @@ const SystemConfiguration = () => {
   });
 
   const saveConfiguration = () => {
-    const settings = localStorageService.getSettings();
+    const settings = hybridStorageService.getSettings();
     const updatedSettings = {
       ...settings,
       systemConfiguration: configuration
     };
-    localStorageService.saveSettings(updatedSettings);
+    hybridStorageService.saveSettings(updatedSettings);
     message.success('系统配置保存成功！');
   };
 
@@ -462,267 +461,259 @@ const SystemConfiguration = () => {
           style={{ marginBottom: 24 }}
         />
 
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane
-            tab={<span><TeamOutlined />角色体系</span>}
-            key="roles"
-          >
-            <Card
-              title="角色定义"
-              extra={
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => openModal('role')}
+        <Tabs 
+          activeKey={activeTab} 
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'roles',
+              label: <span><TeamOutlined />角色体系</span>,
+              children: (
+                <Card
+                  title="角色定义"
+                  extra={
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => openModal('role')}
+                    >
+                      添加角色
+                    </Button>
+                  }
                 >
-                  添加角色
-                </Button>
-              }
-            >
-              <Paragraph type="secondary" style={{ marginBottom: 16 }}>
-                定义您企业中需要参与排班的角色类型，如：管理人员、技术人员、客服人员等。
-              </Paragraph>
-              
-              <Table
-                columns={roleColumns}
-                dataSource={configuration.roles}
-                rowKey="id"
-                pagination={false}
-                size="middle"
-              />
-            </Card>
-          </TabPane>
-
-          <TabPane
-            tab={<span><ClockCircleOutlined />值班模式</span>}
-            key="dutyModes"
-          >
-            <Card
-              title="值班模式定义"
-              extra={
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => openModal('dutyMode')}
+                  <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+                    定义您企业中需要参与排班的角色类型，如：管理人员、技术人员、客服人员等。
+                  </Paragraph>
+                  
+                  <Table
+                    columns={roleColumns}
+                    dataSource={configuration.roles}
+                    rowKey="id"
+                    pagination={false}
+                    size="middle"
+                  />
+                </Card>
+              )
+            },
+            {
+              key: 'dutyModes',
+              label: <span><ClockCircleOutlined />值班模式</span>,
+              children: (
+                <Card
+                  title="值班模式定义"
+                  extra={
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => openModal('dutyMode')}
+                    >
+                      添加模式
+                    </Button>
+                  }
                 >
-                  添加模式
-                </Button>
-              }
-            >
-              <Paragraph type="secondary" style={{ marginBottom: 16 }}>
-                定义不同的值班模式，如：每日轮换、每周轮换、连班模式等。可以为不同角色设置不同的值班模式。
-              </Paragraph>
-              
-              <Table
-                columns={dutyModeColumns}
-                dataSource={configuration.dutyModes}
-                rowKey="id"
-                pagination={false}
-                size="middle"
-              />
-            </Card>
-          </TabPane>
-
-          <TabPane
-            tab={<span><CalendarOutlined />时间规则</span>}
-            key="time"
-          >
-            <Card title="工作时间配置">
-              <Form layout="vertical">
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Form.Item label="工作日设置">
-                      <Checkbox.Group
-                        options={[
-                          { label: '周一', value: 1 },
-                          { label: '周二', value: 2 },
-                          { label: '周三', value: 3 },
-                          { label: '周四', value: 4 },
-                          { label: '周五', value: 5 },
-                          { label: '周六', value: 6 },
-                          { label: '周日', value: 0 }
-                        ]}
-                        value={configuration.timeRules.workingDays}
-                        onChange={(days) => {
-                          setConfiguration(prev => ({
-                            ...prev,
-                            timeRules: {
-                              ...prev.timeRules,
-                              workingDays: days
-                            }
-                          }));
-                        }}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item label="工作时间">
-                      <Space>
-                        <Input
-                          placeholder="09:00"
-                          value={configuration.timeRules.workingHours?.start}
-                          onChange={(e) => {
-                            setConfiguration(prev => ({
-                              ...prev,
-                              timeRules: {
-                                ...prev.timeRules,
-                                workingHours: {
-                                  ...prev.timeRules.workingHours,
-                                  start: e.target.value
-                                }
-                              }
-                            }));
-                          }}
-                        />
-                        <Text>至</Text>
-                        <Input
-                          placeholder="18:00"
-                          value={configuration.timeRules.workingHours?.end}
-                          onChange={(e) => {
-                            setConfiguration(prev => ({
-                              ...prev,
-                              timeRules: {
-                                ...prev.timeRules,
-                                workingHours: {
-                                  ...prev.timeRules.workingHours,
-                                  end: e.target.value
-                                }
-                              }
-                            }));
-                          }}
-                        />
-                      </Space>
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Form>
-            </Card>
-          </TabPane>
-
-          <TabPane
-            tab={<span><TeamOutlined />编组设置</span>}
-            key="groupSettings"
-          >
-            <Card title="值班编组配置">
-              <Alert
-                message="编组说明"
-                description="可以选择个人值班或编组值班。编组值班时，将按照编组轮换，而不是个人轮换。"
-                type="info"
-                showIcon
-                style={{ marginBottom: 24 }}
-              />
-              
-              <Form layout="vertical">
-                <Form.Item label="轮换方式">
-                  <Select
-                    value={configuration.groupSettings?.rotationLevel}
-                    onChange={(value) => {
-                      setConfiguration(prev => ({
-                        ...prev,
-                        groupSettings: {
-                          ...prev.groupSettings,
-                          rotationLevel: value,
-                          enableGrouping: value === 'group'
-                        }
-                      }));
-                    }}
-                    style={{ width: 200 }}
-                  >
-                    <Option value="individual">个人轮换</Option>
-                    <Option value="group">编组轮换</Option>
-                  </Select>
-                </Form.Item>
-
-                {configuration.groupSettings?.rotationLevel === 'group' && (
-                  <>
-                    <Divider>编组类型配置</Divider>
+                  <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+                    定义不同的值班模式，如：每日轮换、每周轮换、连班模式等。可以为不同角色设置不同的值班模式。
+                  </Paragraph>
+                  
+                  <Table
+                    columns={dutyModeColumns}
+                    dataSource={configuration.dutyModes}
+                    rowKey="id"
+                    pagination={false}
+                    size="middle"
+                  />
+                </Card>
+              )
+            },
+            {
+              key: 'time',
+              label: <span><CalendarOutlined />时间规则</span>,
+              children: (
+                <Card title="工作时间配置">
+                  <Form layout="vertical">
                     <Row gutter={16}>
-                      {configuration.groupSettings?.groupTypes?.map((groupType, index) => (
-                        <Col span={8} key={groupType.id}>
-                          <Card size="small" title={groupType.name}>
-                            <p>{groupType.description}</p>
-                            <p>成员数量：{groupType.minMembers}-{groupType.maxMembers}人</p>
-                          </Card>
-                        </Col>
-                      ))}
+                      <Col span={12}>
+                        <Form.Item label="工作日设置">
+                          <Checkbox.Group
+                            options={[
+                              { label: '周一', value: 1 },
+                              { label: '周二', value: 2 },
+                              { label: '周三', value: 3 },
+                              { label: '周四', value: 4 },
+                              { label: '周五', value: 5 },
+                              { label: '周六', value: 6 },
+                              { label: '周日', value: 0 }
+                            ]}
+                            value={configuration.timeRules.workingDays}
+                            onChange={(days) => {
+                              setConfiguration(prev => ({
+                                ...prev,
+                                timeRules: {
+                                  ...prev.timeRules,
+                                  workingDays: days
+                                }
+                              }));
+                            }}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label="工作时间">
+                          <Space>
+                            <Input
+                              placeholder="09:00"
+                              value={configuration.timeRules.workingHours?.start}
+                              onChange={(e) => {
+                                setConfiguration(prev => ({
+                                  ...prev,
+                                  timeRules: {
+                                    ...prev.timeRules,
+                                    workingHours: {
+                                      ...prev.timeRules.workingHours,
+                                      start: e.target.value
+                                    }
+                                  }
+                                }));
+                              }}
+                            />
+                            <Text>至</Text>
+                            <Input
+                              placeholder="18:00"
+                              value={configuration.timeRules.workingHours?.end}
+                              onChange={(e) => {
+                                setConfiguration(prev => ({
+                                  ...prev,
+                                  timeRules: {
+                                    ...prev.timeRules,
+                                    workingHours: {
+                                      ...prev.timeRules.workingHours,
+                                      end: e.target.value
+                                    }
+                                  }
+                                }));
+                              }}
+                            />
+                          </Space>
+                        </Form.Item>
+                      </Col>
                     </Row>
-                  </>
-                )}
-              </Form>
-            </Card>
-          </TabPane>
+                  </Form>
+                </Card>
+              )
+            },
+            {
+              key: 'groupSettings',
+              label: <span><TeamOutlined />编组设置</span>,
+              children: (
+                <Card title="值班编组配置">
+                  <Alert
+                    message="编组说明"
+                    description="可以选择个人值班或编组值班。编组值班时，将按照编组轮换，而不是个人轮换。"
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 24 }}
+                  />
+                  
+                  <Form layout="vertical">
+                    <Form.Item label="轮换方式">
+                      <Select
+                        value={configuration.groupSettings?.rotationLevel}
+                        onChange={(value) => {
+                          setConfiguration(prev => ({
+                            ...prev,
+                            groupSettings: {
+                              ...prev.groupSettings,
+                              rotationLevel: value,
+                              enableGrouping: value === 'group'
+                            }
+                          }));
+                        }}
+                        style={{ width: 200 }}
+                      >
+                        <Option value="individual">个人轮换</Option>
+                        <Option value="group">编组轮换</Option>
+                      </Select>
+                    </Form.Item>
 
-          <TabPane
-            tab={<span><CheckCircleOutlined />约束条件</span>}
-            key="constraints"
-          >
-            <Card title="全局约束设置">
-              <Form layout="vertical">
-                <Row gutter={16}>
-                  <Col span={8}>
-                    <Form.Item label="每班次最少人数">
-                      <InputNumber
-                        min={0}
-                        value={configuration.constraints.global?.minStaffPerShift}
-                        onChange={(value) => {
-                          setConfiguration(prev => ({
-                            ...prev,
-                            constraints: {
-                              ...prev.constraints,
-                              global: {
-                                ...prev.constraints.global,
-                                minStaffPerShift: value
-                              }
-                            }
-                          }));
-                        }}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={8}>
-                    <Form.Item label="每班次最多人数">
-                      <InputNumber
-                        min={1}
-                        value={configuration.constraints.global?.maxStaffPerShift}
-                        onChange={(value) => {
-                          setConfiguration(prev => ({
-                            ...prev,
-                            constraints: {
-                              ...prev.constraints,
-                              global: {
-                                ...prev.constraints.global,
-                                maxStaffPerShift: value
-                              }
-                            }
-                          }));
-                        }}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={8}>
-                    <Form.Item label="允许空班">
-                      <Switch
-                        checked={configuration.constraints.global?.allowEmptyShift}
-                        onChange={(checked) => {
-                          setConfiguration(prev => ({
-                            ...prev,
-                            constraints: {
-                              ...prev.constraints,
-                              global: {
-                                ...prev.constraints.global,
-                                allowEmptyShift: checked
-                              }
-                            }
-                          }));
-                        }}
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Form>
-            </Card>
-          </TabPane>
-        </Tabs>
+                    {configuration.groupSettings?.rotationLevel === 'group' && (
+                      <>
+                        <Divider>编组类型配置</Divider>
+                        <Row gutter={16}>
+                          {configuration.groupSettings?.groupTypes?.map((groupType, index) => (
+                            <Col span={8} key={groupType.id}>
+                              <Card size="small" title={groupType.name}>
+                                <p>{groupType.description}</p>
+                                <p>成员数量：{groupType.minMembers}-{groupType.maxMembers}人</p>
+                              </Card>
+                            </Col>
+                          ))}
+                        </Row>
+                      </>
+                    )}
+                  </Form>
+                </Card>
+              )
+            },
+            {
+              key: 'constraints',
+              label: <span><CheckCircleOutlined />约束条件</span>,
+              children: (
+                <Card title="全局约束设置">
+                  <Alert
+                    message="约束说明"
+                    description="设置全局的排班约束条件，这些条件将影响所有排班规则的生成。"
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 24 }}
+                  />
+                  
+                  <Form layout="vertical">
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item label="最大连续值班天数">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={7}
+                            value={configuration.constraints?.maxConsecutiveDays}
+                            onChange={(e) => {
+                              setConfiguration(prev => ({
+                                ...prev,
+                                constraints: {
+                                  ...prev.constraints,
+                                  maxConsecutiveDays: parseInt(e.target.value) || 3
+                                }
+                              }));
+                            }}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label="最小休息天数">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={7}
+                            value={configuration.constraints?.minRestDays}
+                            onChange={(e) => {
+                              setConfiguration(prev => ({
+                                ...prev,
+                                constraints: {
+                                  ...prev.constraints,
+                                  minRestDays: parseInt(e.target.value) || 1
+                                }
+                              }));
+                            }}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </Form>
+                </Card>
+              )
+            }
+          ]}
+        />
 
         <Divider />
 

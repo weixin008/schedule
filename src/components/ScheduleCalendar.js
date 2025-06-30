@@ -31,7 +31,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import isoWeek from 'dayjs/plugin/isoWeek';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 // 设置dayjs插件和语言
 dayjs.extend(weekOfYear);
@@ -53,10 +53,10 @@ const ScheduleCalendar = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const schedulesData = localStorageService.getDutySchedules();
-    const personnelData = localStorageService.getPersonnel();
-    const positionsData = localStorageService.getPositions();
+  const loadData = async () => {
+    const schedulesData = await hybridStorageService.getDutySchedules();
+    const personnelData = await hybridStorageService.getPersonnel();
+    const positionsData = await hybridStorageService.getPositions();
     
     console.log('ScheduleCalendar 加载数据:', {
       排班记录数量: schedulesData.length,
@@ -466,11 +466,37 @@ const ScheduleCalendar = () => {
           <>
             {viewMode === 'month' && (
               <div style={{ height: '100%', overflow: 'hidden' }}>
-                <Calendar 
-                  onSelect={handleDateSelect}
-                  dateCellRender={dateCellRender}
+                <Calendar
                   value={currentDate}
-                  onChange={setCurrentDate}
+                  onSelect={handleDateSelect}
+                  cellRender={dateCellRender}
+                  headerRender={({ value, onChange }) => (
+                    <div style={{ padding: '8px 0', textAlign: 'center' }}>
+                      <Space>
+                        <Button 
+                          size="small" 
+                          onClick={() => onChange(value.clone().subtract(1, 'month'))}
+                        >
+                          上个月
+                        </Button>
+                        <Title level={4} style={{ margin: 0 }}>
+                          {value.format('YYYY年MM月')}
+                        </Title>
+                        <Button 
+                          size="small" 
+                          onClick={() => onChange(value.clone().add(1, 'month'))}
+                        >
+                          下个月
+                        </Button>
+                        <Button 
+                          size="small" 
+                          onClick={() => onChange(dayjs())}
+                        >
+                          今天
+                        </Button>
+                      </Space>
+                    </div>
+                  )}
                   style={{ height: '100%' }}
                 />
               </div>

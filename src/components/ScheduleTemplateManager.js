@@ -37,7 +37,7 @@ import {
   EditOutlined,
   DeleteOutlined
 } from '@ant-design/icons';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 const { Title, Paragraph, Text } = Typography;
 const { Panel } = Collapse;
@@ -191,7 +191,7 @@ const ScheduleTemplateManager = () => {
 
   const handleSaveConfiguration = () => {
     try {
-      const settings = localStorageService.getSettings();
+      const settings = hybridStorageService.getSettings();
       const updatedSettings = {
         ...settings,
         systemConfiguration: {
@@ -200,7 +200,7 @@ const ScheduleTemplateManager = () => {
           createdAt: new Date().toISOString()
         }
       };
-      localStorageService.saveSettings(updatedSettings);
+      hybridStorageService.saveSettings(updatedSettings);
       message.success('配置保存成功！您可以开始使用排班系统了。');
       setCurrentStep(3);
     } catch (error) {

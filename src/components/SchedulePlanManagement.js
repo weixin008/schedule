@@ -27,7 +27,7 @@ import {
   ClockCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -53,9 +53,9 @@ const SchedulePlanManagement = () => {
   }, []);
 
   const loadData = () => {
-    const employeesData = localStorageService.getEmployees();
-    const settings = localStorageService.getSettings();
-    const plansData = localStorageService.getSchedulePlans() || [];
+    const employeesData = hybridStorageService.getEmployees();
+    const settings = hybridStorageService.getSettings();
+    const plansData = hybridStorageService.getSchedulePlans() || [];
     
     setEmployees(employeesData);
     setScheduleRules(settings?.scheduleRules);
@@ -98,11 +98,11 @@ const SchedulePlanManagement = () => {
     const schedules = [];
     const leaders = employees.filter(emp => 
       rules.leaderRotation.personnel.includes(emp.id) && 
-      localStorageService.isEmployeeAvailable(emp.id, startDate)
+      hybridStorageService.isEmployeeAvailable(emp.id, startDate)
     );
     const staff = employees.filter(emp => 
       rules.staffRotation.personnel.includes(emp.id) && 
-      localStorageService.isEmployeeAvailable(emp.id, startDate)
+      hybridStorageService.isEmployeeAvailable(emp.id, startDate)
     );
 
     if (leaders.length === 0) {
@@ -136,7 +136,7 @@ const SchedulePlanManagement = () => {
       if (rules.leaderRotation.enabled) {
         if ((isWorkday && rules.leaderRotation.workdays) || (!isWorkday && rules.leaderRotation.weekends)) {
           const leader = leaders[leaderIndex % leaders.length];
-          if (localStorageService.isEmployeeAvailable(leader.id, dateStr)) {
+          if (hybridStorageService.isEmployeeAvailable(leader.id, dateStr)) {
             daySchedule.assignments.push({
               employeeId: leader.id,
               employeeName: leader.name,
@@ -175,7 +175,7 @@ const SchedulePlanManagement = () => {
           }
         }
 
-        if (currentStaff && localStorageService.isEmployeeAvailable(currentStaff.id, dateStr)) {
+        if (currentStaff && hybridStorageService.isEmployeeAvailable(currentStaff.id, dateStr)) {
           daySchedule.assignments.push({
             employeeId: currentStaff.id,
             employeeName: currentStaff.name,
@@ -192,7 +192,7 @@ const SchedulePlanManagement = () => {
         
         currentGroup.members.forEach(memberId => {
           const supervisor = employees.find(emp => emp.id === memberId);
-          if (supervisor && localStorageService.isEmployeeAvailable(supervisor.id, dateStr)) {
+          if (supervisor && hybridStorageService.isEmployeeAvailable(supervisor.id, dateStr)) {
             daySchedule.assignments.push({
               employeeId: supervisor.id,
               employeeName: supervisor.name,
@@ -230,9 +230,9 @@ const SchedulePlanManagement = () => {
       };
 
       // 保存计划
-      const existingPlans = localStorageService.getSchedulePlans() || [];
+      const existingPlans = hybridStorageService.getSchedulePlans() || [];
       existingPlans.push(planData);
-      localStorageService.saveSchedulePlans(existingPlans);
+      hybridStorageService.saveSchedulePlans(existingPlans);
 
       // 将计划中的排班添加到值班日历
       previewData.forEach(daySchedule => {
@@ -261,7 +261,7 @@ const SchedulePlanManagement = () => {
           };
 
           try {
-            localStorageService.addDutySchedule(schedule);
+            hybridStorageService.addDutySchedule(schedule);
           } catch (error) {
             console.warn('排班冲突:', error.message);
           }
@@ -283,14 +283,14 @@ const SchedulePlanManagement = () => {
       content: '删除计划将同时删除相关的值班安排，确定继续吗？',
       onOk: () => {
         // 删除计划
-        const existingPlans = localStorageService.getSchedulePlans() || [];
+        const existingPlans = hybridStorageService.getSchedulePlans() || [];
         const filteredPlans = existingPlans.filter(p => p.id !== planId);
-        localStorageService.saveSchedulePlans(filteredPlans);
+        hybridStorageService.saveSchedulePlans(filteredPlans);
 
         // 删除相关的值班安排
-        const schedules = localStorageService.getDutySchedules();
+        const schedules = hybridStorageService.getDutySchedules();
         const filteredSchedules = schedules.filter(s => s.planId !== planId);
-        localStorageService.saveDutySchedules(filteredSchedules);
+        hybridStorageService.saveDutySchedules(filteredSchedules);
 
         loadData();
         message.success('计划删除成功');

@@ -1,28 +1,105 @@
-# 依赖目录
+# ============================================
+# 排班管理系统 - 跨平台版本
+# 只上传源码，构建在GitHub Actions中完成
+# 源码大小：约1.6MB，完全符合GitHub免费额度
+# ============================================
+
+# Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# 构建输出
-/build
-/dist
+# Production builds
+build/
+dist/
+electron-dist/
 
-# 环境变量
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# IDE和编辑器
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# 操作系统
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -31,67 +108,39 @@ yarn-error.log*
 ehthumbs.db
 Thumbs.db
 
-# 日志文件
+# Electron build cache
+.electron-builder-cache/
+
+# Capacitor
+.capacitor/
+android/
+ios/
+
+# Build artifacts
+*.exe
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+*.tar.gz
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Logs
+logs
 *.log
 
-# 运行时数据
-pids
-*.pid
-*.seed
-*.pid.lock
+# Local configuration
+.env.local
+config.local.js
 
-# 覆盖率目录
-coverage/
-.nyc_output
+# Backup files
+*.bak
+*.backup
 
-# 临时文件
-tmp/
-temp/
-
-# 可选的npm缓存目录
-.npm
-
-# 可选的eslint缓存
-.eslintcache
-
-# Microbundle缓存
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# 可选的REPL历史
-.node_repl_history
-
-# 输出的npm包
-*.tgz
-
-# Yarn完整性文件
-.yarn-integrity
-
-# parcel-bundler缓存 
-.cache
-.parcel-cache
-
-# next.js构建输出
-.next
-
-# nuxt.js构建输出
-.nuxt
-
-# vuepress构建输出
-.vuepress/dist
-
-# Serverless目录
-.serverless
-
-# FuseBox缓存
-.fusebox/
-
-# DynamoDB本地
-.dynamodb/
-
-# 测试报告
-test-results/
-test-report.html 
-node_modules
+# Large build files
+electron-builder-linux.json

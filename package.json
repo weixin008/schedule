@@ -12,23 +12,19 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "dev": "npm start",
-    
     "electron": "npx electron .",
     "electron:dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && npx electron .\"",
     "electron:pack": "npm run build && npx electron-builder",
     "electron:dist": "npm run build && npx electron-builder --publish=never",
-    
     "build:linux": "npm run build && npx electron-builder --linux",
     "build:linux:deb": "npm run build && npx electron-builder --linux deb",
     "build:linux:rpm": "npm run build && npx electron-builder --linux rpm",
     "build:linux:appimage": "npm run build && npx electron-builder --linux AppImage",
     "build:linux:snap": "npm run build && npx electron-builder --linux snap",
     "build:linux:all": "npm run build && npx electron-builder --linux deb rpm AppImage",
-    
     "build:uos": "npm run build && npx electron-builder --linux deb --config.linux.target.arch=x64",
     "build:kylin": "npm run build && npx electron-builder --linux rpm --config.linux.target.arch=x64",
     "build:deepin": "npm run build && npx electron-builder --linux deb --config.linux.target.arch=x64",
-    
     "build:android": "npm run build && npx cap copy android && npx cap open android",
     "android": "npx cap open android",
     "ios": "npx cap open ios",
@@ -46,8 +42,10 @@
   "license": "MIT",
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
+    "@tauri-apps/api": "^2.6.0",
     "antd": "^5.12.8",
     "dayjs": "^1.11.10",
+    "mongodb": "^6.3.0",
     "react": "^18.2.0",
     "react-big-calendar": "^1.8.5",
     "react-dom": "^18.2.0",
@@ -57,13 +55,11 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^5.6.0",
+    "@tauri-apps/cli": "^2.6.0",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
-    "concurrently": "^8.2.2",
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.1",
-    "typescript": "^4.9.5",
-    "wait-on": "^7.2.0"
+    "http-proxy-middleware": "^3.0.5",
+    "typescript": "^4.9.5"
   },
   "browserslist": {
     "production": [
@@ -77,7 +73,7 @@
       "last 1 safari version"
     ]
   },
-  "homepage": "./",
+  "homepage": "",
   "build": {
     "appId": "com.douzi.paiban",
     "productName": "排班管理系统",
@@ -94,7 +90,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ]
     },
@@ -102,11 +101,17 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64", "ia32"]
+          "arch": [
+            "x64",
+            "ia32"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64", "ia32"]
+          "arch": [
+            "x64",
+            "ia32"
+          ]
         }
       ],
       "icon": "public/assets/icon.ico"
@@ -116,19 +121,31 @@
       "target": [
         {
           "target": "deb",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "rpm",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "AppImage",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "tar.gz",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "desktop": {
@@ -143,8 +160,17 @@
     },
     "deb": {
       "priority": "optional",
-      "depends": ["gconf2", "gconf-service", "libnotify4", "libappindicator1", "libxtst6", "libnss3"],
-      "recommends": ["lsb-release"],
+      "depends": [
+        "gconf2",
+        "gconf-service",
+        "libnotify4",
+        "libappindicator1",
+        "libxtst6",
+        "libnss3"
+      ],
+      "recommends": [
+        "lsb-release"
+      ],
       "packageCategory": "utils",
       "maintainer": "豆子 <weixin008@users.noreply.github.com>",
       "vendor": "豆子爱分享",
@@ -157,7 +183,14 @@
       "group": "Applications/Office",
       "summary": "企业排班管理系统",
       "description": "功能强大的排班管理系统，支持人员管理、岗位设置、排班规则制定、排班日历等功能。专为中国企业设计，完美支持银河麒麟、统信UOS、深度Deepin等国产操作系统。",
-      "requires": ["gconf2", "gtk3", "libnotify", "nss", "libXScrnSaver", "libxss1"],
+      "requires": [
+        "gconf2",
+        "gtk3",
+        "libnotify",
+        "nss",
+        "libXScrnSaver",
+        "libxss1"
+      ],
       "afterInstall": "scripts/rpm-after-install.sh",
       "afterRemove": "scripts/rpm-after-remove.sh"
     },

@@ -37,7 +37,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 dayjs.extend(isBetween);
 
@@ -54,6 +54,27 @@ const Dashboard = () => {
   const [substituteModalVisible, setSubstituteModalVisible] = useState(false);
   const [currentConflict, setCurrentConflict] = useState(null);
   const [selectedSubstitute, setSelectedSubstitute] = useState(null);
+  const [currentDate, setCurrentDate] = useState(dayjs());
+
+  // 标签映射（英文到中文）
+  const tagMapping = {
+    'leader_tag': '领导',
+    'staff_tag': '职工',
+    'supervisor_tag': '监督员',
+    'middle_tag': '中层'
+  };
+
+  // 状态映射（英文到中文）
+  const statusMapping = {
+    'active': '在岗',
+    'on_duty': '在岗',
+    'leave': '请假',
+    'business_trip': '出差',
+    'official_business': '公出',
+    'sick_leave': '病假',
+    'time_off': '调休',
+    'resigned': '离职'
+  };
 
   useEffect(() => {
     loadData();
@@ -61,16 +82,16 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
     try {
-      const personnelData = localStorageService.getPersonnel();
-      const schedulesData = localStorageService.getDutySchedules();
-      const positionsData = localStorageService.getPositions();
+      const personnelData = await hybridStorageService.getPersonnel();
+      const schedulesData = await hybridStorageService.getDutySchedules();
+      const positionsData = await hybridStorageService.getPositions();
       
       // 自动检测冲突
-      localStorageService.detectScheduleConflicts();
-      const conflictsData = localStorageService.getConflictRecords();
-      const substitutesData = localStorageService.getSubstituteRecordsSimple();
+      await hybridStorageService.detectScheduleConflicts();
+      const conflictsData = await hybridStorageService.getConflictRecords();
+      const substitutesData = await hybridStorageService.getSubstituteRecordsSimple();
 
       setPersonnel(personnelData);
       setSchedules(schedulesData);
@@ -118,12 +139,13 @@ const Dashboard = () => {
     };
 
     personnel.forEach(person => {
-      // 标签统计
-      stats.byTag[person.tag] = (stats.byTag[person.tag] || 0) + 1;
+      // 标签统计（使用中文显示）
+      const displayTag = tagMapping[person.tag] || person.tag;
+      stats.byTag[displayTag] = (stats.byTag[displayTag] || 0) + 1;
       
-      // 状态统计
-      const status = person.status || '在岗';
-      stats.byStatus[status] = (stats.byStatus[status] || 0) + 1;
+      // 状态统计（使用中文显示）
+      const displayStatus = statusMapping[person.status] || person.status;
+      stats.byStatus[displayStatus] = (stats.byStatus[displayStatus] || 0) + 1;
       
       // 可用性统计
       if (isPersonCurrentlyAvailable(person)) {
@@ -150,7 +172,7 @@ const Dashboard = () => {
   // 获取最近的替班记录（包含冲突信息）
   const getRecentSubstitutesWithConflicts = () => {
     // 获取所有冲突记录（包括已解决的）
-    const allConflicts = localStorageService.getConflictRecords();
+    const allConflicts = hybridStorageService.getConflictRecords();
     
     // 合并替班记录和冲突记录
     const allRecords = [];
@@ -234,6 +256,7 @@ const Dashboard = () => {
           personId,
           personName: person?.name || '未知',
           personTag: person?.tag || '',
+          displayTag: tagMapping[person?.tag] || person?.tag || '',
           count
         };
       })
@@ -309,8 +332,8 @@ const Dashboard = () => {
         <Space>
           <UserOutlined />
           <span>{name}</span>
-          <Tag size="small" color={record.personTag === '领导' ? 'red' : 'blue'}>
-            {record.personTag}
+          <Tag size="small" color={record.displayTag === '领导' ? 'red' : record.displayTag === '职工' ? 'blue' : record.displayTag === '监督员' ? 'green' : 'orange'}>
+            {record.displayTag}
           </Tag>
         </Space>
       )
@@ -328,6 +351,12 @@ const Dashboard = () => {
     }
   ];
 
+  // 处理日期选择
+  const handleDateSelect = (date) => {
+    setCurrentDate(date);
+    // 可以在这里添加日期选择后的逻辑，比如显示该日期的排班详情
+  };
+
   // 处理替班点击
   const handleSubstituteClick = (record) => {
     if (record.type === 'conflict') {
@@ -341,7 +370,7 @@ const Dashboard = () => {
   const getAvailableSubstitutes = (conflictRecord) => {
     if (!conflictRecord) return [];
     
-    const conflictDate = new Date(conflictRecord.scheduleDate + 'T00:00:00.000Z');
+    const conflictDate = dayjs(conflictRecord.scheduleDate);
     return personnel.filter(person => {
       // 排除冲突人员自己
       if (person.id === conflictRecord.originalPersonId) return false;
@@ -350,9 +379,9 @@ const Dashboard = () => {
       if (person.status !== '在岗') {
         if (!person.statusPeriod) return false;
         
-        const startDate = new Date(person.statusPeriod.start + 'T00:00:00.000Z');
-        const endDate = new Date(person.statusPeriod.end + 'T23:59:59.999Z');
-        if (conflictDate >= startDate && conflictDate <= endDate) return false;
+        const startDate = dayjs(person.statusPeriod.start);
+        const endDate = dayjs(person.statusPeriod.end);
+        if (conflictDate.isBetween(startDate, endDate, 'day', '[]')) return false;
       }
       
       return true;
@@ -381,21 +410,21 @@ const Dashboard = () => {
       };
 
       // 保存替班记录
-      localStorageService.addSubstituteRecordSimple(substituteRecord);
+      hybridStorageService.addSubstituteRecordSimple(substituteRecord);
 
       // 更新排班表
-      const schedules = localStorageService.getDutySchedules();
+      const schedules = hybridStorageService.getDutySchedules();
       const scheduleIndex = schedules.findIndex(s => s.id === currentConflict.scheduleId);
       
       if (scheduleIndex !== -1) {
         schedules[scheduleIndex].assignedPersonId = selectedSubstitute;
         schedules[scheduleIndex].originalPersonId = currentConflict.originalPersonId;
         schedules[scheduleIndex].isSubstituted = true;
-        localStorageService.saveDutySchedules(schedules);
+        hybridStorageService.saveDutySchedules(schedules);
       }
 
       // 标记冲突为已解决
-      localStorageService.resolveConflict(currentConflict.id, {
+      hybridStorageService.resolveConflict(currentConflict.id, {
         method: 'substitute',
         substitutePersonId: selectedSubstitute,
         substitutePersonName: personnel.find(p => p.id === selectedSubstitute)?.name,
@@ -436,7 +465,7 @@ const Dashboard = () => {
             <Button 
               type="dashed" 
               onClick={() => {
-                localStorageService.createDemoDataWithConflicts();
+                hybridStorageService.createDemoDataWithConflicts();
                 loadData();
                 message.success('演示数据创建成功！包含冲突示例，可以测试替班功能。');
               }}
@@ -600,7 +629,7 @@ const Dashboard = () => {
                 <Space direction="vertical" style={{ width: '100%' }}>
                   {Object.entries(personnelStats.byTag).map(([tag, count]) => (
                     <div key={tag} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Tag color={tag === '领导' ? 'red' : tag === '职工' ? 'blue' : 'green'}>
+                      <Tag color={tag === '领导' ? 'red' : tag === '职工' ? 'blue' : tag === '监督员' ? 'green' : 'orange'}>
                         {tag}
                       </Tag>
                       <Text strong>{count}人</Text>
@@ -613,7 +642,18 @@ const Dashboard = () => {
                 <Space direction="vertical" style={{ width: '100%' }}>
                   {Object.entries(personnelStats.byStatus).map(([status, count]) => (
                     <div key={status} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Tag color={status === '在岗' ? 'success' : 'warning'}>
+                      <Tag color={(() => {
+                        const colors = {
+                          '在岗': 'green',
+                          '请假': 'orange',
+                          '出差': 'blue',
+                          '公出': 'cyan',
+                          '病假': 'red',
+                          '调休': 'purple',
+                          '离职': 'default'
+                        };
+                        return colors[status] || 'default';
+                      })()}>
                         {status}
                       </Tag>
                       <Text strong>{count}人</Text>
@@ -636,9 +676,11 @@ const Dashboard = () => {
             }
             size="small"
           >
-            <Calendar 
-              fullscreen={false}
-              dateCellRender={dateCellRender}
+            <Calendar
+              value={currentDate}
+              onSelect={handleDateSelect}
+              cellRender={dateCellRender}
+              style={{ height: '100%' }}
             />
           </Card>
         </Col>

@@ -35,7 +35,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 // 扩展 dayjs 插件
 dayjs.extend(isBetween);
@@ -43,12 +43,11 @@ dayjs.extend(isBetween);
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
-const { TabPane } = Tabs;
 
 const PersonnelManagement = () => {
   const [personnel, setPersonnel] = useState([]);
   const [customTags, setCustomTags] = useState(['领导', '职工', '中层']);
-  const [statusList] = useState(['在岗', '请假', '公出', '病假', '调休', '离职']);
+  const [statusList] = useState(['在岗', '请假', '出差', '公出', '病假', '调休', '离职']);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isStatusModalVisible, setIsStatusModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -59,27 +58,96 @@ const PersonnelManagement = () => {
   const [conflicts, setConflicts] = useState([]);
   const [activeTab, setActiveTab] = useState('personnel');
 
+  // 标签映射（英文到中文）
+  const tagMapping = {
+    'leader_tag': '领导',
+    'staff_tag': '职工',
+    'supervisor_tag': '监督员',
+    'middle_tag': '中层'
+  };
+
+  // 状态映射（英文到中文）
+  const statusMapping = {
+    'active': '在岗',
+    'on_duty': '在岗',
+    'leave': '请假',
+    'business_trip': '出差',
+    'official_business': '公出',
+    'sick_leave': '病假',
+    'time_off': '调休',
+    'resigned': '离职'
+  };
+
+  // 状态颜色映射
+  const statusColorMapping = {
+    '在岗': 'green',
+    '请假': 'orange',
+    '出差': 'blue',
+    '公出': 'cyan',
+    '病假': 'red',
+    '调休': 'purple',
+    '离职': 'default'
+  };
+
   useEffect(() => {
     loadData();
     checkConflicts();
   }, []);
 
-  const loadData = () => {
-    const data = localStorageService.getPersonnel();
-    const tags = localStorageService.getCustomTags();
-    setPersonnel(data);
+  const loadData = async () => {
+    const data = await hybridStorageService.getPersonnel();
+    const tags = await hybridStorageService.getCustomTags();
+    
+    // 检查并修复人员状态问题
+    const hasInvalidStatus = data.some(person => 
+      !person.status || !['在岗', '请假', '出差', '公出', '病假', '调休', '离职'].includes(person.status)
+    );
+    
+    if (hasInvalidStatus) {
+      console.log('发现无效状态，正在修复...');
+      const fixedData = data.map(person => {
+        // 如果状态为空或无效，设置为"在岗"
+        if (!person.status || !['在岗', '请假', '出差', '公出', '病假', '调休', '离职'].includes(person.status)) {
+          return { ...person, status: '在岗' };
+        }
+        return person;
+      });
+      await hybridStorageService.savePersonnel(fixedData);
+      setPersonnel(fixedData);
+    } else {
+      setPersonnel(data);
+    }
+    
     setCustomTags(tags);
+    
+    // 检查并修复标签显示问题
+    const hasInvalidTags = data.some(person => 
+      person.tag && !tagMapping[person.tag] && !['领导', '职工', '监督员', '中层'].includes(person.tag)
+    );
+    
+    if (hasInvalidTags) {
+      console.log('发现无效标签，正在修复...');
+      const fixedData = data.map(person => {
+        if (person.tag && !tagMapping[person.tag] && !['领导', '职工', '监督员', '中层'].includes(person.tag)) {
+          // 将无效标签转换为默认标签
+          return { ...person, tag: 'staff_tag' };
+        }
+        return person;
+      });
+      await hybridStorageService.savePersonnel(fixedData);
+      setPersonnel(fixedData);
+    }
   };
 
-  const saveData = (data) => {
-    localStorageService.savePersonnel(data);
+  const saveData = async (data) => {
+    await hybridStorageService.savePersonnel(data);
     setPersonnel(data);
   };
 
   // 检查排班冲突
-  const checkConflicts = () => {
-    const schedules = localStorageService.getDutySchedules();
-    const personnelData = localStorageService.getPersonnel();
+  const checkConflicts = async () => {
+    const schedules = await hybridStorageService.getDutySchedules();
+    const personnelData = await hybridStorageService.getPersonnel();
     const conflictList = [];
 
     schedules.forEach(schedule => {
@@ -138,6 +206,10 @@ const PersonnelManagement = () => {
   const handleAdd = () => {
     setEditingId(null);
     form.resetFields();
+    // 设置默认状态为"在岗"
+    form.setFieldsValue({
+      status: '在岗'
+    });
     setIsModalVisible(true);
   };
 
@@ -221,6 +293,48 @@ const PersonnelManagement = () => {
     } catch (error) {
       console.error('状态更新失败:', error);
     }
+  };
+
+  // 查看人员排班
+  const handleViewSchedule = async (person) => {
+    const schedules = await hybridStorageService.getDutySchedules();
+    const personSchedules = schedules.filter(schedule => 
+      schedule.assignedPersonId === person.id || 
+      (schedule.assignedPersonIds && schedule.assignedPersonIds.includes(person.id))
+    );
+
+    if (personSchedules.length === 0) {
+      message.info(`${person.name} 暂无排班安排`);
+      return;
+    }
+
+    // 按日期排序
+    const sortedSchedules = personSchedules.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // 显示排班信息
+    const scheduleInfo = sortedSchedules.map(schedule => 
+      `${schedule.date} (${dayjs(schedule.date).format('dddd')}): ${schedule.positionName || '值班'}`
+    ).join('\n');
+
+    Modal.info({
+      title: `${person.name} 的排班安排`,
+      content: (
+        <div>
+          <p>共 {personSchedules.length} 次排班：</p>
+          <pre style={{ 
+            maxHeight: '300px', 
+            overflow: 'auto', 
+            backgroundColor: '#f5f5f5', 
+            padding: '12px',
+            borderRadius: '4px'
+          }}>
+            {scheduleInfo}
+          </pre>
+        </div>
+      ),
+      width: 500,
+      okText: '确定'
+    });
   };
 
   // 替班处理
@@ -365,7 +479,7 @@ const PersonnelManagement = () => {
   };
 
   // 执行替班操作
-  const executeSubstitute = (conflict, substitutePerson) => {
+  const executeSubstitute = async (conflict, substitutePerson) => {
     try {
       // 创建替班记录
       const substituteRecord = {
@@ -382,10 +496,10 @@ const PersonnelManagement = () => {
       };
 
       // 保存替班记录
-      const savedRecord = localStorageService.addSubstituteRecordSimple(substituteRecord);
+      const savedRecord = await hybridStorageService.addSubstituteRecordSimple(substituteRecord);
 
       // 更新排班表
-      const schedules = localStorageService.getDutySchedules();
+      const schedules = await hybridStorageService.getDutySchedules();
       const scheduleIndex = schedules.findIndex(s => s.id === conflict.scheduleId);
       
       if (scheduleIndex !== -1) {
@@ -409,11 +523,11 @@ const PersonnelManagement = () => {
           }
         }
 
-        localStorageService.saveDutySchedules(schedules);
+        await hybridStorageService.saveDutySchedules(schedules);
       }
 
       // 标记冲突为已解决
-      localStorageService.resolveConflict(conflict.id, {
+      await hybridStorageService.resolveConflict(conflict.id, {
         method: 'substitute',
         substitutePersonId: substitutePerson.id,
         substitutePersonName: substitutePerson.name,
@@ -423,7 +537,7 @@ const PersonnelManagement = () => {
       message.success(`替班安排成功！${substitutePerson.name} 将替换 ${conflict.personName} 在 ${conflict.date} 值班`);
       
       // 重新检查冲突
-      checkConflicts();
+      await checkConflicts();
       
       // 关闭所有模态框
       Modal.destroyAll();
@@ -444,7 +558,7 @@ const PersonnelManagement = () => {
     return !date.isBetween(startDate, endDate, 'day', '[]');
   };
 
-  const handleAddCustomTag = () => {
+  const handleAddCustomTag = async () => {
     if (!newTagInput.trim()) {
       message.warning('请输入标签名称');
       return;
@@ -455,12 +569,12 @@ const PersonnelManagement = () => {
     }
     const newTags = [...customTags, newTagInput.trim()];
     setCustomTags(newTags);
-    localStorageService.saveCustomTags(newTags);
+    await hybridStorageService.saveCustomTags(newTags);
     setNewTagInput('');
     message.success('标签添加成功');
   };
 
-  const handleDeleteTag = (tagToDelete) => {
+  const handleDeleteTag = async (tagToDelete) => {
     if (customTags.length <= 1) {
       message.warning('至少需要保留一个标签');
       return;
@@ -474,7 +588,7 @@ const PersonnelManagement = () => {
     
     const newTags = customTags.filter(tag => tag !== tagToDelete);
     setCustomTags(newTags);
-    localStorageService.saveCustomTags(newTags);
+    await hybridStorageService.saveCustomTags(newTags);
     message.success('标签删除成功');
   };
 
@@ -497,14 +611,17 @@ const PersonnelManagement = () => {
       key: 'tag',
       width: 80,
       render: (tag) => {
+        // 将英文标签转换为中文显示
+        const displayTag = tagMapping[tag] || tag;
         const colors = {
           '领导': 'red',
           '职工': 'blue', 
-          '中层': 'green'
+          '监督员': 'green',
+          '中层': 'orange'
         };
         return (
-          <Tag color={colors[tag] || 'default'}>
-            {tag}
+          <Tag color={colors[displayTag] || 'default'}>
+            {displayTag}
           </Tag>
         );
       },
@@ -515,21 +632,15 @@ const PersonnelManagement = () => {
       key: 'status',
       width: 120,
       render: (status, record) => {
-        const colors = {
-          '在岗': 'success',
-          '请假': 'warning',
-          '公出': 'processing',
-          '病假': 'error',
-          '调休': 'default',
-          '离职': 'default'
-        };
+        // 将英文状态转换为中文显示
+        const displayStatus = statusMapping[status] || status;
         
         const statusInfo = (
           <div>
-            <Tag color={colors[status] || 'default'}>
-              {status}
+            <Tag color={statusColorMapping[displayStatus] || 'default'}>
+              {displayStatus}
             </Tag>
-            {record.statusPeriod && status !== '在岗' && (
+            {record.statusPeriod && displayStatus !== '在岗' && (
               <div style={{ fontSize: '12px', color: '#666' }}>
                 {dayjs(record.statusPeriod.start).format('MM/DD')} - {dayjs(record.statusPeriod.end).format('MM/DD')}
               </div>
@@ -561,7 +672,7 @@ const PersonnelManagement = () => {
     {
       title: '操作',
       key: 'action',
-      width: 180,
+      width: 220,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
@@ -580,6 +691,14 @@ const PersonnelManagement = () => {
             onClick={() => handleManageStatus(record)}
           >
             状态
+          </Button>
+          <Button 
+            type="link" 
+            size="small"
+            icon={<CalendarOutlined />}
+            onClick={() => handleViewSchedule(record)}
+          >
+            排班
           </Button>
           <Popconfirm
             title="确定删除吗？"
@@ -601,8 +720,10 @@ const PersonnelManagement = () => {
     const statusStats = {};
     
     personnel.forEach(person => {
-      tagStats[person.tag] = (tagStats[person.tag] || 0) + 1;
-      statusStats[person.status] = (statusStats[person.status] || 0) + 1;
+      const displayTag = tagMapping[person.tag] || person.tag;
+      const displayStatus = statusMapping[person.status] || person.status;
+      tagStats[displayTag] = (tagStats[displayTag] || 0) + 1;
+      statusStats[displayStatus] = (statusStats[displayStatus] || 0) + 1;
     });
     
     return { tagStats, statusStats };
@@ -618,7 +739,7 @@ const PersonnelManagement = () => {
             <Title level={5}>人员统计</Title>
             <Space wrap>
               {Object.entries(tagStats).map(([tag, count]) => (
-                <Tag key={tag} color={tag === '领导' ? 'red' : tag === '职工' ? 'blue' : 'green'}>
+                <Tag key={tag} color={tag === '领导' ? 'red' : tag === '职工' ? 'blue' : tag === '监督员' ? 'green' : 'orange'}>
                   {tag}: {count}人
                 </Tag>
               ))}
@@ -631,7 +752,7 @@ const PersonnelManagement = () => {
             <Title level={5}>状态统计</Title>
             <Space wrap>
               {Object.entries(statusStats).map(([status, count]) => (
-                <Tag key={status} color={status === '在岗' ? 'success' : 'warning'}>
+                <Tag key={status} color={statusColorMapping[status] || 'default'}>
                   {status}: {count}人
                 </Tag>
               ))}
@@ -657,119 +778,122 @@ const PersonnelManagement = () => {
       </Row>
 
       <Card>
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane 
-            tab={<span><UserOutlined />人员管理</span>} 
-            key="personnel"
-          >
-            <div style={{ marginBottom: '16px', textAlign: 'right' }}>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-                添加人员
-              </Button>
-            </div>
-            
-            <Table
-              columns={columns}
-              dataSource={personnel}
-              rowKey="id"
-              pagination={{ pageSize: 10 }}
-              size="small"
-              scroll={{ x: 800 }}
-            />
-          </TabPane>
-
-          <TabPane 
-            tab={
-              <span>
-                <ExclamationCircleOutlined />
-                排班冲突 
-                {conflicts.length > 0 && <Badge count={conflicts.length} size="small" />}
-              </span>
-            } 
-            key="conflicts"
-          >
-            {conflicts.length > 0 ? (
-              <List
-                itemLayout="horizontal"
-                dataSource={conflicts}
-                renderItem={(conflict) => (
-                  <List.Item
-                    actions={[
-                      <Button 
-                        type="primary" 
-                        size="small"
-                        icon={<SwapOutlined />}
-                        onClick={() => handleSubstitute(conflict)}
-                      >
-                        安排替班
-                      </Button>
-                    ]}
-                  >
-                    <List.Item.Meta
-                      avatar={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
-                      title={
-                        <Space>
-                          <Text strong>{conflict.personName}</Text>
-                          <Tag color="blue">{conflict.positionName}</Tag>
-                          <Tag color="red">{conflict.date}</Tag>
-                        </Space>
-                      }
-                      description={
-                        <div>
-                          <div>状态：{conflict.personStatus}</div>
-                          {conflict.statusPeriod && (
-                            <div>
-                              期间：{conflict.statusPeriod.start} 至 {conflict.statusPeriod.end}
-                            </div>
-                          )}
-                        </div>
-                      }
+        <Tabs 
+          activeKey={activeTab} 
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'personnel',
+              label: <span><UserOutlined />人员管理</span>,
+              children: (
+                <>
+                  <div style={{ marginBottom: '16px', textAlign: 'right' }}>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                      添加人员
+                    </Button>
+                  </div>
+                  
+                  <Table
+                    columns={columns}
+                    dataSource={personnel}
+                    rowKey="id"
+                    pagination={{ pageSize: 10 }}
+                    size="small"
+                    scroll={{ x: 800 }}
+                  />
+                </>
+              )
+            },
+            {
+              key: 'conflicts',
+              label: (
+                <span>
+                  <ExclamationCircleOutlined />
+                  排班冲突 
+                  {conflicts.length > 0 && <Badge count={conflicts.length} size="small" />}
+                </span>
+              ),
+              children: (
+                <>
+                  {conflicts.length > 0 ? (
+                    <List
+                      itemLayout="horizontal"
+                      dataSource={conflicts}
+                      renderItem={(conflict) => (
+                        <List.Item
+                          actions={[
+                            <Button 
+                              type="primary" 
+                              size="small"
+                              icon={<SwapOutlined />}
+                              onClick={() => handleSubstitute(conflict)}
+                            >
+                              安排替班
+                            </Button>
+                          ]}
+                        >
+                          <List.Item.Meta
+                            avatar={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
+                            title={
+                              <Space>
+                                <Text strong>{conflict.personName}</Text>
+                                <Tag color="blue">{conflict.positionName}</Tag>
+                                <Tag color="red">{conflict.date}</Tag>
+                              </Space>
+                            }
+                            description={
+                              <div>
+                                <div>状态：{conflict.personStatus}</div>
+                                {conflict.statusPeriod && (
+                                  <div>
+                                    期间：{conflict.statusPeriod.start} 至 {conflict.statusPeriod.end}
+                                  </div>
+                                )}
+                              </div>
+                            }
+                          />
+                        </List.Item>
+                      )}
                     />
-                  </List.Item>
-                )}
-              />
-            ) : (
-              <Alert
-                message="无排班冲突"
-                description="当前所有排班安排与人员状态无冲突"
-                type="success"
-                showIcon
-              />
-            )}
-          </TabPane>
-
-          <TabPane 
-            tab={<span><TagOutlined />标签管理</span>} 
-            key="tags"
-          >
-            <Space wrap style={{ marginBottom: '12px' }}>
-              <Text strong>当前标签：</Text>
-              {customTags.map(tag => (
-                <Tag
-                  key={tag}
-                  closable={customTags.length > 1}
-                  onClose={() => handleDeleteTag(tag)}
-                  color={tag === '领导' ? 'red' : tag === '职工' ? 'blue' : tag === '中层' ? 'green' : 'default'}
-                >
-                  {tag}
-                </Tag>
-              ))}
-            </Space>
-            <Divider />
-            <Space>
-              <Input
-                placeholder="输入新标签名称"
-                value={newTagInput}
-                onChange={(e) => setNewTagInput(e.target.value)}
-                onPressEnter={handleAddCustomTag}
-                style={{ width: 200 }}
-              />
-              <Button onClick={handleAddCustomTag} icon={<PlusOutlined />}>
-                添加标签
-              </Button>
-            </Space>
-          </TabPane>
-        </Tabs>
+                  ) : (
+                    <Alert
+                      message="无排班冲突"
+                      description="当前所有排班安排与人员状态无冲突"
+                      type="success"
+                      showIcon
+                    />
+                  )}
+                </>
+              )
+            },
+            {
+              key: 'tags',
+              label: <span><TagOutlined />标签管理</span>,
+              children: (
+                <>
+                  <Space wrap style={{ marginBottom: '12px' }}>
+                    <Text strong>当前标签：</Text>
+                    {Object.entries(tagMapping).map(([key, value]) => (
+                      <Tag
+                        key={key}
+                        color={value === '领导' ? 'red' : value === '职工' ? 'blue' : value === '监督员' ? 'green' : 'orange'}
+                      >
+                        {value}
+                      </Tag>
+                    ))}
+                  </Space>
+                  <Divider />
+                  <Alert
+                    message="标签说明"
+                    description="系统预设了四种人员标签：领导、职工、监督员、中层。这些标签用于区分不同的人员类型和权限。"
+                    type="info"
+                    showIcon
+                  />
+                </>
+              )
+            }
+          ]}
+        />
       </Card>
 
       {/* 添加/编辑人员模态框 */}
@@ -800,8 +924,8 @@ const PersonnelManagement = () => {
                 rules={[{ required: true, message: '请选择标签' }]}
               >
                 <Select placeholder="请选择标签">
-                  {customTags.map(tag => (
-                    <Option key={tag} value={tag}>{tag}</Option>
+                  {Object.entries(tagMapping).map(([key, value]) => (
+                    <Option key={key} value={key}>{value}</Option>
                   ))}
                 </Select>
               </Form.Item>

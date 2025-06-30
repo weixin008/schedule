@@ -13,7 +13,8 @@ import {
   Modal,
   InputNumber,
   Popconfirm,
-  Select
+  Select,
+  Alert
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -24,6 +25,8 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import localStorageService from '../services/localStorageService';
+import tauriStorage from '../services/tauriStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 const Settings = () => {
   const [settings, setSettings] = useState(null);
@@ -31,35 +34,43 @@ const Settings = () => {
   const [editingShift, setEditingShift] = useState(null);
   const [shiftForm] = Form.useForm();
   const [settingsForm] = Form.useForm();
+  const [storageInfo, setStorageInfo] = useState(null);
 
   useEffect(() => {
     loadSettings();
+    loadStorageInfo();
   }, []);
 
   const loadSettings = () => {
-    const settingsData = localStorageService.getSettings();
-    setSettings(settingsData);
-    if (settingsData) {
-      settingsForm.setFieldsValue({
-        workDays: settingsData.workDays,
-        restDays: settingsData.restDays,
-        minStaffPerShift: settingsData.minStaffPerShift
-      });
+    try {
+      const settingsData = hybridStorageService.getSettings();
+      setSettings(settingsData);
+      settingsForm.setFieldsValue(settingsData);
+    } catch (error) {
+      console.error('加载设置失败:', error);
+      message.error('加载设置失败');
     }
   };
 
-  const handleSettingsSave = async () => {
+  const loadStorageInfo = async () => {
+    const info = tauriStorage.getStorageInfo();
+    setStorageInfo(info);
+  };
+
+  const handleSave = async (values) => {
     try {
-      const values = await settingsForm.validateFields();
       const updatedSettings = {
         ...settings,
-        ...values
+        ...values,
+        updateTime: new Date().toISOString()
       };
-      localStorageService.saveSettings(updatedSettings);
+      
+      hybridStorageService.saveSettings(updatedSettings);
       setSettings(updatedSettings);
       message.success('设置保存成功');
     } catch (error) {
-      console.error('设置保存失败:', error);
+      console.error('保存设置失败:', error);
+      message.error('保存设置失败');
     }
   };
 
@@ -85,7 +96,7 @@ const Settings = () => {
       ...settings,
       shifts: settings.shifts.filter(shift => shift.id !== shiftId)
     };
-    localStorageService.saveSettings(updatedSettings);
+    hybridStorageService.saveSettings(updatedSettings);
     setSettings(updatedSettings);
     message.success('班次删除成功');
   };
@@ -117,7 +128,7 @@ const Settings = () => {
         shifts: updatedShifts
       };
 
-      localStorageService.saveSettings(updatedSettings);
+      hybridStorageService.saveSettings(updatedSettings);
       setSettings(updatedSettings);
       setIsShiftModalVisible(false);
       shiftForm.resetFields();
@@ -127,17 +138,52 @@ const Settings = () => {
     }
   };
 
-  const handleResetData = () => {
+  const handleReset = () => {
     Modal.confirm({
-      title: '重置数据',
-      content: '确定要重置所有数据吗？这将删除所有员工和排班记录，并恢复默认设置。',
-      okText: '确定',
-      cancelText: '取消',
+      title: '确认重置',
+      content: '这将重置所有设置到默认值，确定要继续吗？',
       onOk: () => {
-        localStorageService.clearAllData();
-        loadSettings();
-        message.success('数据重置成功');
-        window.location.reload();
+        const defaultSettings = {
+          organizationName: '',
+          theme: 'light',
+          language: 'zh-CN',
+          timezone: 'Asia/Shanghai',
+          dateFormat: 'YYYY-MM-DD',
+          timeFormat: 'HH:mm',
+          workStartTime: '09:00',
+          workEndTime: '18:00',
+          lunchStartTime: '12:00',
+          lunchEndTime: '13:00',
+          enableNotifications: true,
+          enableAutoSave: true,
+          enableConflictDetection: true,
+          maxContinuousDuty: 7,
+          minRestHours: 8,
+          updateTime: new Date().toISOString()
+        };
+        
+        hybridStorageService.saveSettings(defaultSettings);
+        setSettings(defaultSettings);
+        settingsForm.setFieldsValue(defaultSettings);
+        message.success('设置已重置为默认值');
+      }
+    });
+  };
+
+  const handleClearData = () => {
+    Modal.confirm({
+      title: '确认清除数据',
+      content: '这将清除所有本地数据，包括员工信息、排班记录等，此操作不可恢复！确定要继续吗？',
+      onOk: () => {
+        try {
+          hybridStorageService.clearAllData();
+          message.success('所有数据已清除');
+          // 重新加载设置
+          loadSettings();
+        } catch (error) {
+          console.error('清除数据失败:', error);
+          message.error('清除数据失败');
+        }
       }
     });
   };
@@ -215,109 +261,139 @@ const Settings = () => {
   }
 
   return (
-    <div>
-      {/* 基础设置 */}
-      <Card title="基础设置" style={{ marginBottom: 20 }}>
-        <Form
-          form={settingsForm}
-          layout="vertical"
-          onFinish={handleSettingsSave}
-        >
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                label="连续工作天数"
-                name="workDays"
-                rules={[{ required: true, message: '请输入连续工作天数' }]}
+    <div style={{ padding: '24px' }}>
+      <Card title="系统设置" style={{ marginBottom: '16px' }}>
+        {/* 存储信息显示 */}
+        {storageInfo && (
+          <Alert
+            message="数据存储信息"
+            description={
+              <div>
+                <p><strong>存储方式:</strong> {storageInfo.type === 'file' ? '文件存储（持久化）' : '浏览器存储（临时）'}</p>
+                <p><strong>存储位置:</strong> {storageInfo.location}</p>
+                <p><strong>数据持久化:</strong> {storageInfo.persistent ? '✅ 是（关闭应用后数据保留）' : '❌ 否（关闭浏览器后数据丢失）'}</p>
+              </div>
+            }
+            type={storageInfo.persistent ? 'success' : 'warning'}
+            style={{ marginBottom: '16px' }}
+          />
+        )}
+        
+        {/* 基础设置 */}
+        <Card title="基础设置" style={{ marginBottom: 20 }}>
+          <Form
+            form={settingsForm}
+            layout="vertical"
+            onFinish={handleSave}
+          >
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  label="连续工作天数"
+                  name="workDays"
+                  rules={[{ required: true, message: '请输入连续工作天数' }]}
+                >
+                  <InputNumber
+                    min={1}
+                    max={10}
+                    style={{ width: '100%' }}
+                    placeholder="例如：5"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  label="连续休息天数"
+                  name="restDays"
+                  rules={[{ required: true, message: '请输入连续休息天数' }]}
+                >
+                  <InputNumber
+                    min={1}
+                    max={7}
+                    style={{ width: '100%' }}
+                    placeholder="例如：2"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  label="每班最少人数"
+                  name="minStaffPerShift"
+                  rules={[{ required: true, message: '请输入每班最少人数' }]}
+                >
+                  <InputNumber
+                    min={1}
+                    max={10}
+                    style={{ width: '100%' }}
+                    placeholder="例如：2"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item>
+              <Button 
+                type="primary" 
+                htmlType="submit"
+                icon={<SaveOutlined />}
               >
-                <InputNumber
-                  min={1}
-                  max={10}
-                  style={{ width: '100%' }}
-                  placeholder="例如：5"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label="连续休息天数"
-                name="restDays"
-                rules={[{ required: true, message: '请输入连续休息天数' }]}
-              >
-                <InputNumber
-                  min={1}
-                  max={7}
-                  style={{ width: '100%' }}
-                  placeholder="例如：2"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label="每班最少人数"
-                name="minStaffPerShift"
-                rules={[{ required: true, message: '请输入每班最少人数' }]}
-              >
-                <InputNumber
-                  min={1}
-                  max={10}
-                  style={{ width: '100%' }}
-                  placeholder="例如：2"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item>
+                保存设置
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+
+        {/* 班次管理 */}
+        <Card 
+          title="班次管理" 
+          extra={
             <Button 
               type="primary" 
-              htmlType="submit"
-              icon={<SaveOutlined />}
+              icon={<PlusOutlined />}
+              onClick={handleAddShift}
             >
-              保存设置
+              添加班次
             </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+          }
+          style={{ marginBottom: 20 }}
+        >
+          <Table
+            columns={shiftColumns}
+            dataSource={settings.shifts}
+            rowKey="id"
+            pagination={false}
+            size="middle"
+          />
+        </Card>
 
-      {/* 班次管理 */}
-      <Card 
-        title="班次管理" 
-        extra={
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />}
-            onClick={handleAddShift}
-          >
-            添加班次
-          </Button>
-        }
-        style={{ marginBottom: 20 }}
-      >
-        <Table
-          columns={shiftColumns}
-          dataSource={settings.shifts}
-          rowKey="id"
-          pagination={false}
-          size="middle"
-        />
-      </Card>
-
-      {/* 数据管理 */}
-      <Card title="数据管理">
-        <Space size="large">
-          <div>
-            <Button 
-              danger
-              icon={<ReloadOutlined />}
-              onClick={handleResetData}
-            >
-              重置所有数据
-            </Button>
-            <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
-              将删除所有员工和排班记录
+        {/* 数据管理 */}
+        <Card title="数据管理">
+          <Space size="large">
+            <div>
+              <Button 
+                danger
+                icon={<ReloadOutlined />}
+                onClick={handleReset}
+              >
+                重置所有设置
+              </Button>
+              <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
+                将重置所有设置到默认值
+              </div>
             </div>
-          </div>
-        </Space>
+            <div>
+              <Button 
+                danger
+                icon={<ReloadOutlined />}
+                onClick={handleClearData}
+              >
+                清除所有数据
+              </Button>
+              <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
+                将清除所有本地数据
+              </div>
+            </div>
+          </Space>
+        </Card>
       </Card>
 
       {/* 添加/编辑班次模态框 */}

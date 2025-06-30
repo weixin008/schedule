@@ -31,7 +31,7 @@ import {
   EyeOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -52,9 +52,9 @@ const DutyManagement = () => {
   }, []);
 
   const loadData = () => {
-    const schedulesData = localStorageService.getDutySchedules();
-    const employeesData = localStorageService.getEmployees();
-    const settingsData = localStorageService.getSettings();
+    const schedulesData = hybridStorageService.getDutySchedules();
+    const employeesData = hybridStorageService.getEmployees();
+    const settingsData = hybridStorageService.getSettings();
     
     setDutySchedules(schedulesData);
     setEmployees(employeesData);
@@ -91,9 +91,9 @@ const DutyManagement = () => {
       content: '确定要删除这个值班安排吗？',
       onOk: () => {
         // 直接删除值班记录
-        const schedules = localStorageService.getDutySchedules();
+        const schedules = hybridStorageService.getDutySchedules();
         const filteredSchedules = schedules.filter(s => s.id !== scheduleId);
-        localStorageService.saveDutySchedules(filteredSchedules);
+        hybridStorageService.saveDutySchedules(filteredSchedules);
         loadData();
         message.success('值班安排已删除');
       }
@@ -121,7 +121,7 @@ const DutyManagement = () => {
         notes: values.notes || ''
       };
       
-      localStorageService.addDutySchedule(schedule);
+      hybridStorageService.addDutySchedule(schedule);
       loadData();
       setIsModalVisible(false);
       form.resetFields();
@@ -141,7 +141,7 @@ const DutyManagement = () => {
       
       // 如果启用高级排班，需要设置高级排班规则
       if (values.useAdvancedScheduling) {
-        const currentSettings = localStorageService.getSettings();
+        const currentSettings = hybridStorageService.getSettings();
         const updatedSettings = {
           ...currentSettings,
           dutyRules: {
@@ -162,7 +162,7 @@ const DutyManagement = () => {
             }
           }
         };
-        localStorageService.saveSettings(updatedSettings);
+        hybridStorageService.saveSettings(updatedSettings);
       }
 
       const options = {
@@ -170,7 +170,7 @@ const DutyManagement = () => {
         useAdvancedScheduling: values.useAdvancedScheduling
       };
 
-      const schedules = localStorageService.generateIntelligentSchedule(
+      const schedules = hybridStorageService.generateIntelligentSchedule(
         values.dateRange[0].format('YYYY-MM-DD'),
         values.dateRange[1].format('YYYY-MM-DD'),
         options
@@ -179,7 +179,7 @@ const DutyManagement = () => {
       // 批量添加排班
       for (const schedule of schedules) {
         try {
-          localStorageService.addDutySchedule(schedule);
+          hybridStorageService.addDutySchedule(schedule);
         } catch (error) {
           console.warn('智能排班冲突:', error.message);
         }
@@ -225,7 +225,7 @@ const DutyManagement = () => {
     
     const dateStr = selectedDate.format('YYYY-MM-DD');
     return employees.filter(emp => 
-      emp.status === 'active' && localStorageService.isEmployeeAvailable(emp.id, dateStr)
+      emp.status === 'active' && hybridStorageService.isEmployeeAvailable(emp.id, dateStr)
     );
   };
 
@@ -429,7 +429,7 @@ const DutyManagement = () => {
             >
               {employees.filter(emp => emp.status === 'active').map(employee => {
                 const level = settings?.employeeLevels.find(l => l.id === employee.level);
-                const currentStatus = localStorageService.getEmployeeCurrentStatus(employee.id);
+                const currentStatus = hybridStorageService.getEmployeeCurrentStatus(employee.id);
                 const statusType = settings?.employeeStatusTypes.find(type => type.id === currentStatus);
                 const isAvailable = statusType?.allowDuty;
                 

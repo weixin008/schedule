@@ -30,7 +30,7 @@ import {
   CloseOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -48,8 +48,8 @@ const AttendanceSupervisorGroupManagement = () => {
   }, []);
 
   const loadData = () => {
-    const groupsData = localStorageService.getAttendanceSupervisorGroups();
-    const employeesData = localStorageService.getEmployees();
+    const groupsData = hybridStorageService.getAttendanceSupervisorGroups();
+    const employeesData = hybridStorageService.getEmployees();
     setGroups(groupsData);
     setEmployees(employeesData);
   };
@@ -71,7 +71,7 @@ const AttendanceSupervisorGroupManagement = () => {
   };
 
   const handleDelete = (groupId) => {
-    localStorageService.deleteAttendanceSupervisorGroup(groupId);
+    hybridStorageService.deleteAttendanceSupervisorGroup(groupId);
     loadData();
     message.success('编组删除成功');
   };
@@ -82,11 +82,11 @@ const AttendanceSupervisorGroupManagement = () => {
       
       if (editingGroup) {
         // 编辑编组
-        localStorageService.updateAttendanceSupervisorGroup(editingGroup.id, values);
+        hybridStorageService.updateAttendanceSupervisorGroup(editingGroup.id, values);
         message.success('编组信息更新成功');
       } else {
         // 添加新编组
-        localStorageService.addAttendanceSupervisorGroup(values);
+        hybridStorageService.addAttendanceSupervisorGroup(values);
         message.success('编组添加成功');
       }
       

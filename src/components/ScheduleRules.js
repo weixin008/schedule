@@ -1,37 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card,
-  Form,
-  Input,
-  Button,
-  Space,
-  Select,
-  Radio,
-  DatePicker,
   Table,
-  Modal,
   message,
   Typography,
+  Space,
+  Tag,
+  Alert,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Switch,
+  TimePicker,
   Row,
   Col,
-  Alert,
-  Tag,
-  Checkbox
+  Popconfirm,
+  Tooltip
 } from 'antd';
 import {
+  ClockCircleOutlined,
+  PlayCircleOutlined,
   PlusOutlined,
   EditOutlined,
-  DeleteOutlined,
-  ClockCircleOutlined,
-  CalendarOutlined,
-  PlayCircleOutlined
+  DeleteOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
-const { Option } = Select;
 const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
+const { Option } = Select;
+const { TextArea } = Input;
 
 const ScheduleRules = () => {
   const [rules, setRules] = useState([]);
@@ -40,74 +40,167 @@ const ScheduleRules = () => {
   const [editingRule, setEditingRule] = useState(null);
   const [form] = Form.useForm();
 
-  const weekDays = [
-    { label: '周一', value: 1 },
-    { label: '周二', value: 2 },
-    { label: '周三', value: 3 },
-    { label: '周四', value: 4 },
-    { label: '周五', value: 5 },
-    { label: '周六', value: 6 },
-    { label: '周日', value: 0 },
-  ];
-
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const rulesData = localStorageService.getScheduleRules() || [];
-    const positionsData = localStorageService.getPositions() || [];
+  const loadData = async () => {
+    const rulesData = await hybridStorageService.getScheduleRules() || [];
+    const positionsData = await hybridStorageService.getPositions() || [];
     
     setRules(rulesData);
     setPositions(positionsData);
   };
 
-  const saveRules = (data) => {
-    localStorageService.saveScheduleRules(data);
-    loadData();
+  const saveRules = async (data) => {
+    await hybridStorageService.saveScheduleRules(data);
+    setRules(data);
   };
 
-  const handleAddRule = () => {
+  const handleAdd = () => {
     setEditingRule(null);
     form.resetFields();
     form.setFieldsValue({
-      rotationType: 'daily',
-      workDays: [1, 2, 3, 4, 5] // 默认工作日
+      enabled: true,
+      type: 'weekly',
+      pattern: {
+        monday: { enabled: true, positions: [] },
+        tuesday: { enabled: true, positions: [] },
+        wednesday: { enabled: true, positions: [] },
+        thursday: { enabled: true, positions: [] },
+        friday: { enabled: true, positions: [] },
+        saturday: { enabled: false, positions: [] },
+        sunday: { enabled: false, positions: [] }
+      }
     });
     setIsModalVisible(true);
   };
 
-  const handleEditRule = (rule) => {
+  const handleEdit = (rule) => {
     setEditingRule(rule);
+    
+    // 安全地处理workHours字段
+    let workHoursValue = null;
+    if (rule.workHours && rule.workHours.start && rule.workHours.end) {
+      try {
+        // 确保start和end是字符串格式
+        const startStr = typeof rule.workHours.start === 'string' ? rule.workHours.start : '09:00';
+        const endStr = typeof rule.workHours.end === 'string' ? rule.workHours.end : '18:00';
+        
+        // 创建dayjs对象数组，这是TimePicker.RangePicker期望的格式
+        workHoursValue = [
+          dayjs(startStr, 'HH:mm'),
+          dayjs(endStr, 'HH:mm')
+        ];
+      } catch (error) {
+        console.warn('解析工作时间失败:', error);
+        workHoursValue = null;
+      }
+    }
+    
+    // 处理pattern字段 - 转换为表单期望的格式
+    let patternValue = [];
+    if (rule.pattern) {
+      if (rule.pattern.everyDay && rule.pattern.everyDay.enabled) {
+        // 每日规则，选择所有日期
+        patternValue = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      } else {
+        // 周规则，提取启用的日期
+        Object.entries(rule.pattern).forEach(([day, config]) => {
+          if (config && config.enabled) {
+            patternValue.push(day);
+          }
+        });
+      }
+    }
+    
+    // 处理positions字段 - 提取所有启用的岗位
+    let positionsValue = [];
+    if (rule.pattern) {
+      if (rule.pattern.everyDay && rule.pattern.everyDay.enabled) {
+        positionsValue = rule.pattern.everyDay.positions || [];
+      } else {
+        // 获取所有启用的日期中的岗位
+        Object.values(rule.pattern).forEach(config => {
+          if (config && config.enabled && config.positions) {
+            positionsValue = [...positionsValue, ...config.positions];
+          }
+        });
+        // 去重
+        positionsValue = [...new Set(positionsValue)];
+      }
+    }
+    
     form.setFieldsValue({
-      ...rule,
-      dateRange: [dayjs(rule.startDate), dayjs(rule.endDate)]
+      name: rule.name,
+      description: rule.description,
+      type: rule.type,
+      pattern: patternValue,
+      positions: positionsValue,
+      workHours: workHoursValue,
+      enabled: rule.enabled
     });
     setIsModalVisible(true);
   };
 
-  const handleSubmitRule = async () => {
+  const handleDelete = (id) => {
+    const newRules = rules.filter(rule => rule.id !== id);
+    saveRules(newRules);
+    message.success('规则删除成功');
+  };
+
+  const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const { dateRange, ...otherValues } = values;
+      
+      // 处理workHours字段 - TimePicker.RangePicker返回的是dayjs对象数组
+      let workHoursValue = null;
+      if (values.workHours && Array.isArray(values.workHours) && values.workHours.length === 2) {
+        workHoursValue = {
+          start: values.workHours[0].format('HH:mm'),
+          end: values.workHours[1].format('HH:mm')
+        };
+      }
+      
+      // 处理pattern字段 - 将多选格式转换为存储格式
+      let patternValue = {};
+      if (values.pattern && Array.isArray(values.pattern)) {
+        if (values.type === 'daily') {
+          // 日规则：所有选中的日期都启用
+          patternValue = {
+            everyDay: {
+              enabled: true,
+              positions: values.positions || []
+            }
+          };
+        } else {
+          // 周规则：为每个选中的日期创建配置
+          const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          dayNames.forEach(day => {
+            patternValue[day] = {
+              enabled: values.pattern.includes(day),
+              positions: values.pattern.includes(day) ? (values.positions || []) : []
+            };
+          });
+        }
+      }
       
       const ruleData = {
-        ...otherValues,
-        startDate: dateRange[0].format('YYYY-MM-DD'),
-        endDate: dateRange[1].format('YYYY-MM-DD')
+        name: values.name,
+        description: values.description,
+        type: values.type,
+        pattern: patternValue,
+        workHours: workHoursValue,
+        enabled: values.enabled
       };
-      
+
       if (editingRule) {
-        // 编辑
-        const newData = rules.map(item => 
-          item.id === editingRule.id 
-            ? { ...ruleData, id: editingRule.id }
-            : item
+        const newRules = rules.map(rule => 
+          rule.id === editingRule.id ? { ...rule, ...ruleData } : rule
         );
-        saveRules(newData);
-        message.success('规则修改成功');
+        saveRules(newRules);
+        message.success('规则更新成功');
       } else {
-        // 新增
         const newRule = {
           ...ruleData,
           id: Date.now().toString(),
@@ -123,147 +216,75 @@ const ScheduleRules = () => {
     }
   };
 
-  const handleDeleteRule = (id) => {
-    const newData = rules.filter(item => item.id !== id);
-    saveRules(newData);
-    message.success('规则删除成功');
-  };
-
   const generateSchedule = () => {
-    Modal.confirm({
-      title: '生成排班表',
-      content: '确定要根据当前规则生成排班表吗？这将覆盖已有的排班数据。',
-      okText: '确定生成',
-      cancelText: '取消',
-      onOk: () => {
-        const schedules = generateScheduleData();
-        localStorageService.saveDutySchedules(schedules);
-        message.success(`排班表生成成功，共生成 ${schedules.length} 条记录`);
-      }
-    });
-  };
-
-  const generateScheduleData = () => {
-    const schedules = [];
-    
-    console.log('开始生成排班数据:', {
-      规则数量: rules.length,
-      岗位数量: positions.length,
-      规则详情: rules,
-      岗位详情: positions
-    });
-    
-    rules.forEach(rule => {
-      const position = positions.find(p => p.id === rule.positionId);
-      console.log(`处理规则 ${rule.name}:`, {
-        规则: rule,
-        找到岗位: position,
-        岗位人员: position?.assignedPersonnel
-      });
-      
-      if (!position || !position.assignedPersonnel || position.assignedPersonnel.length === 0) {
-        console.log(`跳过规则 ${rule.name}: 岗位不存在或无分配人员`);
+    try {
+      // 检查是否有启用的规则
+      const enabledRules = rules.filter(rule => rule.enabled);
+      if (enabledRules.length === 0) {
+        message.warning('请先启用至少一条轮班规则');
         return;
       }
 
-      const startDate = dayjs(rule.startDate);
-      const endDate = dayjs(rule.endDate);
-      
-      // 处理编组或普通人员排班
-      let assignmentData;
-      if (position.enableGrouping && position.groups && position.groups.length > 0) {
-        // 使用编组
-        assignmentData = position.groups;
+      // 检查是否有岗位数据
+      if (positions.length === 0) {
+        message.warning('请先设置岗位数据');
+        return;
+      }
+
+      // 生成未来30天的排班
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 30);
+
+      const result = hybridStorageService.generateScheduleByRules(
+        startDate.toISOString().split('T')[0],
+        endDate.toISOString().split('T')[0]
+      );
+
+      if (result.success) {
+        message.success(`排班表生成成功！共生成 ${result.scheduleCount} 条排班记录`);
+        // 刷新数据
+        loadData();
       } else {
-        // 使用普通人员列表
-        assignmentData = position.assignedPersonnel;
+        message.error(result.message || '排班表生成失败');
       }
-      
-      let currentIndex = 0;
-
-      for (let date = startDate; date.isBefore(endDate) || date.isSame(endDate); date = date.add(1, 'day')) {
-        const dayOfWeek = date.day();
-        
-        // 检查是否是工作日
-        if (!rule.workDays.includes(dayOfWeek)) {
-          continue;
-        }
-
-        let assignedData;
-        
-        switch (rule.rotationType) {
-          case 'daily':
-            // 每日轮换
-            assignedData = assignmentData[currentIndex % assignmentData.length];
-            currentIndex++;
-            break;
-            
-          case 'weekly':
-            // 每周轮换
-            const weekNumber = Math.floor(date.diff(startDate, 'day') / 7);
-            assignedData = assignmentData[weekNumber % assignmentData.length];
-            break;
-            
-          default:
-            assignedData = assignmentData[0];
-        }
-
-        // 根据是否编组创建排班记录
-        if (position.enableGrouping && position.groups && position.groups.length > 0) {
-          // 编组排班：一条记录包含整个组
-          schedules.push({
-            id: `${rule.id}_${date.format('YYYY-MM-DD')}`,
-            date: date.format('YYYY-MM-DD'),
-            positionId: rule.positionId,
-            positionName: position.name,
-            assignedGroupId: assignedData.id,
-            assignedGroupName: assignedData.name,
-            assignedPersonIds: assignedData.members,
-            ruleId: rule.id,
-            rotationType: rule.rotationType,
-            isGroup: true,
-            createTime: new Date().toISOString()
-          });
-        } else {
-          // 普通排班：一条记录一个人
-          schedules.push({
-            id: `${rule.id}_${date.format('YYYY-MM-DD')}`,
-            date: date.format('YYYY-MM-DD'),
-            positionId: rule.positionId,
-            positionName: position.name,
-            assignedPersonId: assignedData,
-            ruleId: rule.id,
-            rotationType: rule.rotationType,
-            isGroup: false,
-            createTime: new Date().toISOString()
-          });
-        }
-      }
-    });
-
-    console.log('生成排班数据完成:', {
-      生成数量: schedules.length,
-      排班详情: schedules.slice(0, 5)
-    });
-
-    return schedules;
+    } catch (error) {
+      console.error('生成排班表失败:', error);
+      message.error('排班表生成失败，请检查规则配置');
+    }
   };
 
-  const getPositionName = (id) => {
-    const position = positions.find(p => p.id === id);
-    return position ? position.name : '未知岗位';
+  const getPositionNames = (positionIds) => {
+    if (!positionIds || !Array.isArray(positionIds)) return '未设置';
+    
+    const positionNames = positionIds.map(id => {
+      const position = positions.find(p => p.id === id);
+      return position ? position.name : '未知岗位';
+    });
+    
+    return positionNames.join('、');
   };
 
-  const getRotationTypeName = (type) => {
-    const types = {
-      'daily': '每日轮换',
-      'weekly': '每周轮换'
+  const getDayNames = (pattern) => {
+    if (!pattern) return '未设置';
+    
+    const dayNames = {
+      monday: '周一', tuesday: '周二', wednesday: '周三', 
+      thursday: '周四', friday: '周五', saturday: '周六', sunday: '周日'
     };
-    return types[type] || type;
-  };
-
-  const getWorkDaysText = (workDays) => {
-    return workDays.map(day => weekDays.find(w => w.value === day)?.label).join('、');
+    
+    if (pattern.everyDay && pattern.everyDay.enabled) {
+      return '每日';
+    }
+    
+    const enabledDays = [];
+    Object.entries(pattern).forEach(([day, config]) => {
+      if (config && config.enabled) {
+        enabledDays.push(dayNames[day] || day);
+      }
+    });
+    
+    return enabledDays.length > 0 ? enabledDays.join('、') : '未设置';
   };
 
   const columns = [
@@ -279,37 +300,78 @@ const ScheduleRules = () => {
       ),
     },
     {
+      title: '规则描述',
+      dataIndex: 'description',
+      key: 'description',
+      render: (text) => (
+        <Text type="secondary">{text || '无描述'}</Text>
+      ),
+    },
+    {
+      title: '规则类型',
+      dataIndex: 'type',
+      key: 'type',
+      render: (type) => {
+        const typeNames = {
+          'weekly': '周规则',
+          'daily': '日规则'
+        };
+        return <Tag color="blue">{typeNames[type] || type}</Tag>;
+      },
+    },
+    {
+      title: '应用日期',
+      dataIndex: 'pattern',
+      key: 'pattern',
+      render: (pattern) => (
+        <Text>{getDayNames(pattern)}</Text>
+      ),
+    },
+    {
       title: '适用岗位',
-      dataIndex: 'positionId',
-      key: 'positionId',
-      render: (positionId) => (
-        <Tag color="blue">{getPositionName(positionId)}</Tag>
-      ),
+      dataIndex: 'pattern',
+      key: 'positions',
+      render: (pattern) => {
+        if (!pattern) return <Text type="secondary">未设置</Text>;
+        
+        let positionIds = [];
+        if (pattern.everyDay && pattern.everyDay.enabled) {
+          positionIds = pattern.everyDay.positions || [];
+        } else {
+          // 获取所有启用的日期中的岗位
+          Object.values(pattern).forEach(config => {
+            if (config && config.enabled && config.positions) {
+              positionIds = [...positionIds, ...config.positions];
+            }
+          });
+        }
+        
+        return <Text>{getPositionNames([...new Set(positionIds)])}</Text>;
+      },
     },
     {
-      title: '轮班方式',
-      dataIndex: 'rotationType',
-      key: 'rotationType',
-      render: (type) => (
-        <Tag color="green">{getRotationTypeName(type)}</Tag>
-      ),
+      title: '工作时间',
+      key: 'workHours',
+      render: (_, record) => {
+        const workHours = record.workHours;
+        if (!workHours) return <Text type="secondary">未设置</Text>;
+        
+        return (
+          <Space direction="vertical" size="small">
+            <Text>上班: {workHours.start}</Text>
+            <Text>下班: {workHours.end}</Text>
+          </Space>
+        );
+      },
     },
     {
-      title: '工作日',
-      dataIndex: 'workDays',
-      key: 'workDays',
-      render: (workDays) => (
-        <Text>{getWorkDaysText(workDays)}</Text>
-      ),
-    },
-    {
-      title: '时间范围',
-      key: 'dateRange',
-      render: (_, record) => (
-        <Space direction="vertical" size="small">
-          <Text>{record.startDate}</Text>
-          <Text>{record.endDate}</Text>
-        </Space>
+      title: '状态',
+      dataIndex: 'enabled',
+      key: 'enabled',
+      render: (enabled) => (
+        <Tag color={enabled ? 'green' : 'red'}>
+          {enabled ? '启用' : '禁用'}
+        </Tag>
       ),
     },
     {
@@ -320,19 +382,27 @@ const ScheduleRules = () => {
         <Space size="small">
           <Button 
             type="link" 
+            size="small"
             icon={<EditOutlined />}
-            onClick={() => handleEditRule(record)}
+            onClick={() => handleEdit(record)}
           >
             编辑
           </Button>
-          <Button 
-            type="link" 
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDeleteRule(record.id)}
+          <Popconfirm
+            title="确定删除此规则吗？"
+            onConfirm={() => handleDelete(record.id)}
+            okText="确定"
+            cancelText="取消"
           >
-            删除
-          </Button>
+            <Button 
+              type="link" 
+              size="small" 
+              danger 
+              icon={<DeleteOutlined />}
+            >
+              删除
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -343,7 +413,7 @@ const ScheduleRules = () => {
       {/* 提示信息 */}
       <Alert
         message="轮班规则说明"
-        description="1. 每日轮换：每天换一个人值班；2. 每周轮换：一周内同一个人值班，下周换下一个人。"
+        description="系统已预设了标准工作日、周末值班和夜班巡查规则。这些规则会自动应用到排班生成中。"
         type="info"
         showIcon
         style={{ marginBottom: '24px' }}
@@ -362,18 +432,17 @@ const ScheduleRules = () => {
           <Space>
             <Button 
               type="primary" 
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+            >
+              添加规则
+            </Button>
+            <Button 
               icon={<PlayCircleOutlined />}
               onClick={generateSchedule}
               disabled={rules.length === 0}
             >
-              生成排班表
-            </Button>
-            <Button 
-              type="default" 
-              icon={<PlusOutlined />} 
-              onClick={handleAddRule}
-            >
-              添加规则
+              查看排班效果
             </Button>
           </Space>
         }
@@ -387,86 +456,88 @@ const ScheduleRules = () => {
         />
       </Card>
 
-      {/* 添加/编辑规则模态框 */}
       <Modal
-        title={editingRule ? '编辑轮班规则' : '添加轮班规则'}
+        title={editingRule ? '编辑规则' : '添加规则'}
         open={isModalVisible}
-        onOk={handleSubmitRule}
         onCancel={() => setIsModalVisible(false)}
+        onOk={handleSubmit}
         okText="确定"
         cancelText="取消"
-        width={700}
+        width={600}
       >
-        <Form form={form} layout="vertical">
+        <Form
+          form={form}
+          layout="vertical"
+        >
           <Form.Item
             name="name"
             label="规则名称"
             rules={[{ required: true, message: '请输入规则名称' }]}
           >
-            <Input placeholder="如：工作日值班规则、周末值班规则等" />
+            <Input />
           </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="positionId"
-                label="适用岗位"
-                rules={[{ required: true, message: '请选择适用岗位' }]}
-              >
-                <Select placeholder="选择岗位">
-                  {positions.map(position => (
-                    <Option key={position.id} value={position.id}>
-                      {position.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="rotationType"
-                label="轮班方式"
-                rules={[{ required: true, message: '请选择轮班方式' }]}
-              >
-                <Radio.Group>
-                  <Radio value="daily">每日轮换</Radio>
-                  <Radio value="weekly">每周轮换</Radio>
-                </Radio.Group>
-              </Form.Item>
-            </Col>
-          </Row>
-
-
-
-          <Form.Item
-            name="workDays"
-            label="工作日"
-            rules={[{ required: true, message: '请选择工作日' }]}
-          >
-            <Checkbox.Group options={weekDays} />
-          </Form.Item>
-
-          <Form.Item
-            name="dateRange"
-            label="时间范围"
-            rules={[{ required: true, message: '请选择时间范围' }]}
-          >
-            <RangePicker 
-              style={{ width: '100%' }}
-              placeholder={['开始日期', '结束日期']}
-            />
-          </Form.Item>
-
           <Form.Item
             name="description"
             label="规则描述"
           >
-            <Input.TextArea 
-              rows={3} 
-              placeholder="描述此规则的特殊说明（可选）"
-              maxLength={200}
-              showCount
-            />
+            <TextArea />
+          </Form.Item>
+          <Form.Item
+            name="type"
+            label="规则类型"
+            rules={[{ required: true, message: '请选择规则类型' }]}
+          >
+            <Select>
+              <Option value="weekly">周规则</Option>
+              <Option value="daily">日规则</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="pattern"
+            label="应用日期"
+            rules={[{ required: true, message: '请选择应用日期' }]}
+          >
+            <Select
+              mode="multiple"
+              style={{ width: '100%' }}
+              placeholder="请选择应用日期"
+            >
+              <Option value="monday">周一</Option>
+              <Option value="tuesday">周二</Option>
+              <Option value="wednesday">周三</Option>
+              <Option value="thursday">周四</Option>
+              <Option value="friday">周五</Option>
+              <Option value="saturday">周六</Option>
+              <Option value="sunday">周日</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="positions"
+            label="适用岗位"
+            rules={[{ required: true, message: '请选择适用岗位' }]}
+          >
+            <Select
+              mode="multiple"
+              style={{ width: '100%' }}
+              placeholder="请选择适用岗位"
+            >
+              {positions.map(position => (
+                <Option key={position.id} value={position.id}>{position.name}</Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="workHours"
+            label="工作时间"
+          >
+            <TimePicker.RangePicker />
+          </Form.Item>
+          <Form.Item
+            name="enabled"
+            label="状态"
+            valuePropName="checked"
+          >
+            <Switch />
           </Form.Item>
         </Form>
       </Modal>

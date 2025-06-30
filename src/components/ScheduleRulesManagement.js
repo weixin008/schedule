@@ -26,11 +26,10 @@ import {
   CalendarOutlined,
   CheckCircleOutlined
 } from '@ant-design/icons';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 const ScheduleRulesManagement = () => {
   const [form] = Form.useForm();
@@ -43,8 +42,8 @@ const ScheduleRulesManagement = () => {
   }, []);
 
   const loadData = () => {
-    const employeesData = localStorageService.getEmployees();
-    const settings = localStorageService.getSettings();
+    const employeesData = hybridStorageService.getEmployees();
+    const settings = hybridStorageService.getSettings();
     
     setEmployees(employeesData);
     setCurrentRules(settings?.scheduleRules || getDefaultRules());
@@ -106,13 +105,13 @@ const ScheduleRulesManagement = () => {
       }
 
       // 保存到设置中
-      const settings = localStorageService.getSettings();
+      const settings = hybridStorageService.getSettings();
       const updatedSettings = {
         ...settings,
         scheduleRules: values
       };
       
-      localStorageService.saveSettings(updatedSettings);
+      hybridStorageService.saveSettings(updatedSettings);
       setCurrentRules(values);
       message.success('排班规则保存成功！');
       
@@ -199,175 +198,176 @@ const ScheduleRulesManagement = () => {
           layout="vertical"
           initialValues={getDefaultRules()}
         >
-          <Tabs defaultActiveKey="leader">
-            {/* 领导值班规则 */}
-            <TabPane 
-              tab={<span><TeamOutlined />领导值班规则</span>} 
-              key="leader"
-            >
-              <Card size="small" title="领导轮换配置">
-                <Form.Item name={['leaderRotation', 'enabled']} valuePropName="checked">
-                  <Switch checkedChildren="启用" unCheckedChildren="禁用" />
-                  <span style={{ marginLeft: 8 }}>启用领导值班轮换</span>
-                </Form.Item>
-
-                <Form.Item
-                  label="轮换模式"
-                  name={['leaderRotation', 'mode']}
-                >
-                  <Select>
-                    <Option value="daily">每日轮换</Option>
-                    <Option value="weekly">每周轮换</Option>
-                    <Option value="fixed">固定安排</Option>
-                  </Select>
-                </Form.Item>
-
-                <Form.Item
-                  label="参与人员"
-                  name={['leaderRotation', 'personnel']}
-                  tooltip="按列表顺序轮换值班，可拖拽调整顺序"
-                >
-                  <Select
-                    mode="multiple"
-                    placeholder="选择参与轮换的领导"
-                    style={{ width: '100%' }}
-                  >
-                    {getEmployeesByRole('leader').map(emp => (
-                      <Option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.employeeId})
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Form.Item name={['leaderRotation', 'workdays']} valuePropName="checked">
-                      <Switch />
-                      <span style={{ marginLeft: 8 }}>工作日值班</span>
+          <Tabs 
+            defaultActiveKey="leader"
+            items={[
+              {
+                key: 'leader',
+                label: <span><TeamOutlined />领导值班规则</span>,
+                children: (
+                  <Card size="small" title="领导轮换配置">
+                    <Form.Item name={['leaderRotation', 'enabled']} valuePropName="checked">
+                      <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+                      <span style={{ marginLeft: 8 }}>启用领导值班轮换</span>
                     </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item name={['leaderRotation', 'weekends']} valuePropName="checked">
-                      <Switch />
-                      <span style={{ marginLeft: 8 }}>周末值班</span>
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Card>
-            </TabPane>
 
-            {/* 职工值班规则 */}
-            <TabPane 
-              tab={<span><ClockCircleOutlined />职工值班规则</span>} 
-              key="staff"
-            >
-              <Card size="small" title="职工轮换配置">
-                <Form.Item name={['staffRotation', 'enabled']} valuePropName="checked">
-                  <Switch checkedChildren="启用" unCheckedChildren="禁用" />
-                  <span style={{ marginLeft: 8 }}>启用职工值班轮换</span>
-                </Form.Item>
-
-                <Row gutter={16}>
-                  <Col span={12}>
                     <Form.Item
-                      label="周一至周四模式"
-                      name={['staffRotation', 'weekdayMode']}
+                      label="轮换模式"
+                      name={['leaderRotation', 'mode']}
                     >
                       <Select>
-                        <Option value="daily">每日轮换（一人一天）</Option>
+                        <Option value="daily">每日轮换</Option>
                         <Option value="weekly">每周轮换</Option>
                         <Option value="fixed">固定安排</Option>
                       </Select>
                     </Form.Item>
-                  </Col>
-                  <Col span={12}>
+
                     <Form.Item
-                      label="周五至周日模式"
-                      name={['staffRotation', 'weekendMode']}
+                      label="参与人员"
+                      name={['leaderRotation', 'personnel']}
+                      tooltip="按列表顺序轮换值班，可拖拽调整顺序"
                     >
-                      <Select>
-                        <Option value="continuous_three">连班三天</Option>
-                        <Option value="daily">每日轮换</Option>
-                        <Option value="weekly">每周轮换</Option>
+                      <Select
+                        mode="multiple"
+                        placeholder="选择参与轮换的领导"
+                        style={{ width: '100%' }}
+                      >
+                        {getEmployeesByRole('leader').map(emp => (
+                          <Option key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.employeeId})
+                          </Option>
+                        ))}
                       </Select>
                     </Form.Item>
-                  </Col>
-                </Row>
 
-                <Form.Item
-                  label="参与人员"
-                  name={['staffRotation', 'personnel']}
-                  tooltip="按列表顺序轮换值班"
-                >
-                  <Select
-                    mode="multiple"
-                    placeholder="选择参与轮换的职工"
-                    style={{ width: '100%' }}
-                  >
-                    {getEmployeesByRole('staff').map(emp => (
-                      <Option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.employeeId})
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Card>
-            </TabPane>
-
-            {/* 考勤监督员规则 */}
-            <TabPane 
-              tab={<span><CalendarOutlined />监督员规则</span>} 
-              key="supervision"
-            >
-              <Card size="small" title="考勤监督员配置">
-                <Form.Item name={['supervisionRules', 'enabled']} valuePropName="checked">
-                  <Switch checkedChildren="启用" unCheckedChildren="禁用" />
-                  <span style={{ marginLeft: 8 }}>启用考勤监督员</span>
-                </Form.Item>
-
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Form.Item name={['supervisionRules', 'workdaysOnly']} valuePropName="checked">
-                      <Switch defaultChecked />
-                      <span style={{ marginLeft: 8 }}>仅工作日安排</span>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name={['leaderRotation', 'workdays']} valuePropName="checked">
+                          <Switch />
+                          <span style={{ marginLeft: 8 }}>工作日值班</span>
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name={['leaderRotation', 'weekends']} valuePropName="checked">
+                          <Switch />
+                          <span style={{ marginLeft: 8 }}>周末值班</span>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </Card>
+                )
+              },
+              {
+                key: 'staff',
+                label: <span><ClockCircleOutlined />职工值班规则</span>,
+                children: (
+                  <Card size="small" title="职工轮换配置">
+                    <Form.Item name={['staffRotation', 'enabled']} valuePropName="checked">
+                      <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+                      <span style={{ marginLeft: 8 }}>启用职工值班轮换</span>
                     </Form.Item>
-                  </Col>
-                  <Col span={12}>
+
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item
+                          label="周一至周四模式"
+                          name={['staffRotation', 'weekdayMode']}
+                        >
+                          <Select>
+                            <Option value="daily">每日轮换（一人一天）</Option>
+                            <Option value="weekly">每周轮换</Option>
+                            <Option value="fixed">固定安排</Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label="周五至周日模式"
+                          name={['staffRotation', 'weekendMode']}
+                        >
+                          <Select>
+                            <Option value="continuous_three">连班三天</Option>
+                            <Option value="daily">每日轮换</Option>
+                            <Option value="weekly">每周轮换</Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
                     <Form.Item
-                      label="轮换模式"
-                      name={['supervisionRules', 'rotationMode']}
+                      label="参与人员"
+                      name={['staffRotation', 'personnel']}
+                      tooltip="按列表顺序轮换值班"
                     >
-                      <Select>
-                        <Option value="weekly">每周轮换编组</Option>
-                        <Option value="monthly">每月轮换编组</Option>
-                        <Option value="fixed">固定编组</Option>
+                      <Select
+                        mode="multiple"
+                        placeholder="选择参与轮换的职工"
+                        style={{ width: '100%' }}
+                      >
+                        {getEmployeesByRole('staff').map(emp => (
+                          <Option key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.employeeId})
+                          </Option>
+                        ))}
                       </Select>
                     </Form.Item>
-                  </Col>
-                </Row>
+                  </Card>
+                )
+              },
+              {
+                key: 'supervision',
+                label: <span><CalendarOutlined />监督员规则</span>,
+                children: (
+                  <Card size="small" title="考勤监督员配置">
+                    <Form.Item name={['supervisionRules', 'enabled']} valuePropName="checked">
+                      <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+                      <span style={{ marginLeft: 8 }}>启用考勤监督员</span>
+                    </Form.Item>
 
-                <Form.Item
-                  label="监督员编组"
-                  name={['supervisionRules', 'groups']}
-                  tooltip="每个编组固定2人，按编组顺序轮换"
-                >
-                  <SupervisorGroupSelector 
-                    employees={getEmployeesByRole('supervisor')}
-                    value={form.getFieldValue(['supervisionRules', 'groups']) || []}
-                    onChange={(groups) => {
-                      form.setFieldsValue({
-                        supervisionRules: {
-                          ...form.getFieldValue('supervisionRules'),
-                          groups
-                        }
-                      });
-                    }}
-                  />
-                </Form.Item>
-              </Card>
-            </TabPane>
-          </Tabs>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name={['supervisionRules', 'workdaysOnly']} valuePropName="checked">
+                          <Switch defaultChecked />
+                          <span style={{ marginLeft: 8 }}>仅工作日安排</span>
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label="轮换模式"
+                          name={['supervisionRules', 'rotationMode']}
+                        >
+                          <Select>
+                            <Option value="weekly">每周轮换编组</Option>
+                            <Option value="monthly">每月轮换编组</Option>
+                            <Option value="fixed">固定编组</Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Form.Item
+                      label="监督员编组"
+                      name={['supervisionRules', 'groups']}
+                      tooltip="每个编组固定2人，按编组顺序轮换"
+                    >
+                      <SupervisorGroupSelector 
+                        employees={getEmployeesByRole('supervisor')}
+                        value={form.getFieldValue(['supervisionRules', 'groups']) || []}
+                        onChange={(groups) => {
+                          form.setFieldsValue({
+                            supervisionRules: {
+                              ...form.getFieldValue('supervisionRules'),
+                              groups
+                            }
+                          });
+                        }}
+                      />
+                    </Form.Item>
+                  </Card>
+                )
+              }
+            ]}
+          />
 
           <Divider />
 

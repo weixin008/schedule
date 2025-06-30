@@ -39,7 +39,7 @@ import {
   DeleteOutlined
 } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 
 const { Title, Text } = Typography;
@@ -58,9 +58,9 @@ const SystemSettings = ({ onSettingsChange }) => {
     loadSettings();
   }, []);
 
-  const loadSettings = () => {
+  const loadSettings = async () => {
     try {
-      const systemSettings = localStorageService.getSystemSettings();
+      const systemSettings = await hybridStorageService.getSystemSettings();
       setSettings(systemSettings);
       form.setFieldsValue(systemSettings);
     } catch (error) {
@@ -79,7 +79,7 @@ const SystemSettings = ({ onSettingsChange }) => {
         updateTime: new Date().toISOString()
       };
       
-      localStorageService.saveSystemSettings(updatedSettings);
+      await hybridStorageService.saveSystemSettings(updatedSettings);
       setSettings(updatedSettings);
       
       message.success('系统设置保存成功');
@@ -150,16 +150,16 @@ const SystemSettings = ({ onSettingsChange }) => {
   };
 
   // 导出Excel文件
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
-      const personnel = localStorageService.getPersonnel();
-      const positions = localStorageService.getPositions();
-      const scheduleRules = localStorageService.getScheduleRules();
-      const dutySchedules = localStorageService.getDutySchedules();
-      const customTags = localStorageService.getCustomTags();
-      const conflictRecords = localStorageService.getConflictRecords();
-      const substituteRecords = localStorageService.getSubstituteRecordsSimple();
-      const systemSettings = localStorageService.getSystemSettings();
+      const personnel = await hybridStorageService.getPersonnel();
+      const positions = await hybridStorageService.getPositions();
+      const scheduleRules = await hybridStorageService.getScheduleRules();
+      const dutySchedules = await hybridStorageService.getDutySchedules();
+      const customTags = await hybridStorageService.getCustomTags();
+      const conflictRecords = await hybridStorageService.getConflictRecords();
+      const substituteRecords = await hybridStorageService.getSubstituteRecordsSimple();
+      const systemSettings = await hybridStorageService.getSystemSettings();
 
       // 创建新的工作簿
       const workbook = XLSX.utils.book_new();
@@ -203,7 +203,7 @@ const SystemSettings = ({ onSettingsChange }) => {
       // 轮班规则工作表
       const rulesData = scheduleRules.map((rule, index) => ({
         '序号': index + 1,
-        '岗位名称': localStorageService.getPositions().find(p => p.id === rule.positionId)?.name || '未知岗位',
+        '岗位名称': positions.find(p => p.id === rule.positionId)?.name || '未知岗位',
         '轮班方式': rule.rotationType === 'daily' ? '每日轮换' : 
                     rule.rotationType === 'weekly' ? '每周轮换' : 
                     rule.rotationType === 'continuous' ? '连班' : rule.rotationType,
@@ -222,8 +222,7 @@ const SystemSettings = ({ onSettingsChange }) => {
       });
 
       const scheduleData = recentSchedules.map((schedule, index) => {
-        const position = localStorageService.getPositions().find(p => p.id === schedule.positionId);
-        const personnel = localStorageService.getPersonnel();
+        const position = positions.find(p => p.id === schedule.positionId);
         
         let assignedNames = '';
         if (schedule.isGroup && schedule.assignedPersonIds) {
@@ -376,17 +375,17 @@ const SystemSettings = ({ onSettingsChange }) => {
   // JSON导出（保留原功能）
   const handleExportJSON = () => {
     try {
-      const systemSettings = localStorageService.getSystemSettings();
+      const systemSettings = hybridStorageService.getSystemSettings();
       
       // 使用新的数据结构导出实际数据
       const data = {
-        personnel: localStorageService.getPersonnel(),
-        customTags: localStorageService.getCustomTags(),
-        positions: localStorageService.getPositions(),
-        scheduleRules: localStorageService.getScheduleRules(),
-        dutySchedules: localStorageService.getDutySchedules(),
-        conflictRecords: localStorageService.getConflictRecords(),
-        substituteRecords: localStorageService.getSubstituteRecordsSimple(),
+        personnel: hybridStorageService.getPersonnel(),
+        customTags: hybridStorageService.getCustomTags(),
+        positions: hybridStorageService.getPositions(),
+        scheduleRules: hybridStorageService.getScheduleRules(),
+        dutySchedules: hybridStorageService.getDutySchedules(),
+        conflictRecords: hybridStorageService.getConflictRecords(),
+        substituteRecords: hybridStorageService.getSubstituteRecordsSimple(),
         systemSettings: systemSettings,
         exportDate: new Date().toISOString(),
         version: '2.0'
@@ -531,37 +530,37 @@ const SystemSettings = ({ onSettingsChange }) => {
     try {
       // 导入自定义标签
       if (importPreview.customTags && importPreview.customTags.length > 0) {
-        const allTags = new Set([...localStorageService.getCustomTags(), ...importPreview.customTags]);
-        localStorageService.saveCustomTags([...allTags]);
+        const allTags = new Set([...hybridStorageService.getCustomTags(), ...importPreview.customTags]);
+        hybridStorageService.saveCustomTags([...allTags]);
       }
 
       // 导入人员信息
       if (importPreview.personnel && importPreview.personnel.length > 0) {
-        const existingPersonnel = localStorageService.getPersonnel();
+        const existingPersonnel = hybridStorageService.getPersonnel();
         const mergedPersonnel = [...existingPersonnel, ...importPreview.personnel];
-        localStorageService.savePersonnel(mergedPersonnel);
+        hybridStorageService.savePersonnel(mergedPersonnel);
         
         // 收集人员标签并更新
-        const allTags = new Set(localStorageService.getCustomTags());
+        const allTags = new Set(hybridStorageService.getCustomTags());
         importPreview.personnel.forEach(person => {
           if (person.tags) {
             person.tags.forEach(tag => allTags.add(tag));
           }
         });
-        localStorageService.saveCustomTags([...allTags]);
+        hybridStorageService.saveCustomTags([...allTags]);
       }
 
       // 导入岗位设置
       if (importPreview.positions && importPreview.positions.length > 0) {
-        const existingPositions = localStorageService.getPositions();
+        const existingPositions = hybridStorageService.getPositions();
         const mergedPositions = [...existingPositions, ...importPreview.positions];
-        localStorageService.savePositions(mergedPositions);
+        hybridStorageService.savePositions(mergedPositions);
       }
 
       // 导入轮班规则
       if (importPreview.scheduleRules && importPreview.scheduleRules.length > 0) {
         // 需要匹配岗位ID
-        const positions = localStorageService.getPositions();
+        const positions = hybridStorageService.getPositions();
         const rulesWithPositionId = importPreview.scheduleRules.map(rule => {
           const position = positions.find(p => p.name === rule.positionName);
           return {
@@ -570,20 +569,20 @@ const SystemSettings = ({ onSettingsChange }) => {
           };
         });
         
-        const existingRules = localStorageService.getScheduleRules();
+        const existingRules = hybridStorageService.getScheduleRules();
         const mergedRules = [...existingRules, ...rulesWithPositionId];
-        localStorageService.saveScheduleRules(mergedRules);
+        hybridStorageService.saveScheduleRules(mergedRules);
       }
 
       // 导入系统设置
       if (importPreview.systemSettings && Object.keys(importPreview.systemSettings).length > 0) {
-        const currentSettings = localStorageService.getSystemSettings();
+        const currentSettings = hybridStorageService.getSystemSettings();
         const updatedSettings = {
           ...currentSettings,
           ...importPreview.systemSettings,
           updateTime: new Date().toISOString()
         };
-        localStorageService.saveSystemSettings(updatedSettings);
+        hybridStorageService.saveSystemSettings(updatedSettings);
       }
 
       setImportModalVisible(false);
@@ -606,17 +605,17 @@ const SystemSettings = ({ onSettingsChange }) => {
         
         // 导入新格式数据
         if (data.version === '2.0') {
-          if (data.personnel) localStorageService.savePersonnel(data.personnel);
-          if (data.customTags) localStorageService.saveCustomTags(data.customTags);
-          if (data.positions) localStorageService.savePositions(data.positions);
-          if (data.scheduleRules) localStorageService.saveScheduleRules(data.scheduleRules);
-          if (data.dutySchedules) localStorageService.saveDutySchedules(data.dutySchedules);
-          if (data.conflictRecords) localStorageService.saveConflictRecords(data.conflictRecords);
-          if (data.substituteRecords) localStorageService.saveSubstituteRecordsSimple(data.substituteRecords);
-          if (data.systemSettings) localStorageService.saveSystemSettings(data.systemSettings);
+          if (data.personnel) hybridStorageService.savePersonnel(data.personnel);
+          if (data.customTags) hybridStorageService.saveCustomTags(data.customTags);
+          if (data.positions) hybridStorageService.savePositions(data.positions);
+          if (data.scheduleRules) hybridStorageService.saveScheduleRules(data.scheduleRules);
+          if (data.dutySchedules) hybridStorageService.saveDutySchedules(data.dutySchedules);
+          if (data.conflictRecords) hybridStorageService.saveConflictRecords(data.conflictRecords);
+          if (data.substituteRecords) hybridStorageService.saveSubstituteRecordsSimple(data.substituteRecords);
+          if (data.systemSettings) hybridStorageService.saveSystemSettings(data.systemSettings);
         } else {
           // 兼容旧格式数据导入
-          localStorageService.importData(data);
+          hybridStorageService.importData(data);
         }
         
         message.success('JSON数据导入成功，请刷新页面查看效果');

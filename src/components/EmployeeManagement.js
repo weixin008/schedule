@@ -36,7 +36,7 @@ import {
   ExclamationCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import localStorageService from '../services/localStorageService';
+import hybridStorageService from '../services/hybridStorageService';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -60,9 +60,9 @@ const EmployeeManagement = () => {
   }, []);
 
   const loadData = () => {
-    const employeesData = localStorageService.getEmployees();
-    const statusData = localStorageService.getEmployeeStatusRecords();
-    const settingsData = localStorageService.getSettings();
+    const employeesData = hybridStorageService.getEmployees();
+    const statusData = hybridStorageService.getEmployeeStatusRecords();
+    const settingsData = hybridStorageService.getSettings();
     
     setEmployees(employeesData);
     setStatusRecords(statusData);
@@ -103,7 +103,7 @@ const EmployeeManagement = () => {
   };
 
   const handleDelete = (employeeId) => {
-    localStorageService.deleteEmployee(employeeId);
+    hybridStorageService.deleteEmployee(employeeId);
     loadData();
     message.success('员工删除成功');
   };
@@ -125,11 +125,11 @@ const EmployeeManagement = () => {
       
       if (editingEmployee) {
         // 编辑员工
-        localStorageService.updateEmployee(editingEmployee.id, values);
+        hybridStorageService.updateEmployee(editingEmployee.id, values);
         message.success('员工信息更新成功');
       } else {
         // 添加新员工
-        localStorageService.addEmployee(values);
+        hybridStorageService.addEmployee(values);
         message.success('员工添加成功');
       }
       
@@ -158,7 +158,7 @@ const EmployeeManagement = () => {
         remarks: values.remarks || ''
       };
 
-      localStorageService.addEmployeeStatusRecord(statusRecord);
+      hybridStorageService.addEmployeeStatusRecord(statusRecord);
       loadData();
       setIsStatusModalVisible(false);
       statusForm.resetFields();
@@ -189,7 +189,7 @@ const EmployeeManagement = () => {
   };
 
   const getCurrentStatus = (employeeId) => {
-    return localStorageService.getEmployeeCurrentStatus(employeeId);
+    return hybridStorageService.getEmployeeCurrentStatus(employeeId);
   };
 
   const getLevelInfo = (levelId) => {

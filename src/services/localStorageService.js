@@ -1,4 +1,6 @@
 // 值班管理系统 - 本地存储服务
+import webStorage from './tauriStorageService';
+
 class LocalStorageService {
   constructor() {
     this.EMPLOYEES_KEY = 'duty_employees';
@@ -9,9 +11,21 @@ class LocalStorageService {
     this.SETTINGS_KEY = 'duty_settings';
     this.ATTENDANCE_SUPERVISOR_GROUPS_KEY = 'attendance_supervisor_groups';
     this.SCHEDULE_PLANS_KEY = 'schedule_plans'; // 新增排班计划存储
+    this.USERS_KEY = 'system_users'; // 新增用户管理存储
+    this.USER_SESSIONS_KEY = 'user_sessions'; // 新增用户会话存储
     
     // 初始化默认数据
     this.initializeDefaultData();
+  }
+
+  // 智能存储：使用Web存储
+  async smartSave(key, data) {
+    return await webStorage.saveData(key, data);
+  }
+
+  // 智能读取：使用Web存储  
+  async smartLoad(key, defaultValue = null) {
+    return await webStorage.loadData(key, defaultValue);
   }
 
   initializeDefaultData() {
@@ -364,9 +378,20 @@ class LocalStorageService {
 
   // 获取冲突原因描述
   getConflictReason(person, date) {
-    if (person.status === '在岗') return '人员状态正常';
-    
-    let reason = `人员状态：${person.status}`;
+    // 状态映射（英文到中文）
+    const statusMapping = {
+      'active': '在岗',
+      'on_duty': '在岗',
+      'leave': '请假',
+      'business_trip': '出差',
+      'official_business': '公出',
+      'sick_leave': '病假',
+      'time_off': '调休',
+      'resigned': '离职'
+    };
+    const statusText = statusMapping[person.status] || person.status || '未知';
+    if (statusText === '在岗') return '人员状态正常';
+    let reason = `人员状态：${statusText}`;
     if (person.statusPeriod) {
       reason += `（${person.statusPeriod.start} 至 ${person.statusPeriod.end}）`;
     }
@@ -1211,28 +1236,28 @@ class LocalStorageService {
     
     // 3个领导
     const leaders = [
-      { id: '1', name: '张主任', tags: ['leader_tag'], phone: '13800001001', status: 'business_trip', employeeId: 'L001', createdAt: now },
-      { id: '2', name: '李经理', tags: ['leader_tag'], phone: '13800001002', status: 'active', employeeId: 'L002', createdAt: now },
-      { id: '3', name: '王总监', tags: ['leader_tag'], phone: '13800001003', status: 'active', employeeId: 'L003', createdAt: now }
+      { id: '1', name: '张主任', tags: ['leader_tag'], phone: '13800001001', status: '出差', employeeId: 'L001', createdAt: now },
+      { id: '2', name: '李经理', tags: ['leader_tag'], phone: '13800001002', status: '在岗', employeeId: 'L002', createdAt: now },
+      { id: '3', name: '王总监', tags: ['leader_tag'], phone: '13800001003', status: '在岗', employeeId: 'L003', createdAt: now }
     ];
     
     // 7个职工
     const staff = [
-      { id: '4', name: '陈小明', tags: ['staff_tag'], phone: '13800002001', status: 'active', employeeId: 'S001', createdAt: now },
-      { id: '5', name: '刘小红', tags: ['staff_tag'], phone: '13800002002', status: 'active', employeeId: 'S002', createdAt: now },
-      { id: '6', name: '赵小华', tags: ['staff_tag'], phone: '13800002003', status: 'active', employeeId: 'S003', createdAt: now },
-      { id: '7', name: '孙小丽', tags: ['staff_tag'], phone: '13800002004', status: 'active', employeeId: 'S004', createdAt: now },
-      { id: '8', name: '周小强', tags: ['staff_tag'], phone: '13800002005', status: 'active', employeeId: 'S005', createdAt: now },
-      { id: '9', name: '吴小花', tags: ['staff_tag'], phone: '13800002006', status: 'active', employeeId: 'S006', createdAt: now },
-      { id: '10', name: '郑小军', tags: ['staff_tag'], phone: '13800002007', status: 'active', employeeId: 'S007', createdAt: now }
+      { id: '4', name: '陈小明', tags: ['staff_tag'], phone: '13800002001', status: '在岗', employeeId: 'S001', createdAt: now },
+      { id: '5', name: '刘小红', tags: ['staff_tag'], phone: '13800002002', status: '在岗', employeeId: 'S002', createdAt: now },
+      { id: '6', name: '赵小华', tags: ['staff_tag'], phone: '13800002003', status: '在岗', employeeId: 'S003', createdAt: now },
+      { id: '7', name: '孙小丽', tags: ['staff_tag'], phone: '13800002004', status: '在岗', employeeId: 'S004', createdAt: now },
+      { id: '8', name: '周小强', tags: ['staff_tag'], phone: '13800002005', status: '在岗', employeeId: 'S005', createdAt: now },
+      { id: '9', name: '吴小花', tags: ['staff_tag'], phone: '13800002006', status: '在岗', employeeId: 'S006', createdAt: now },
+      { id: '10', name: '郑小军', tags: ['staff_tag'], phone: '13800002007', status: '在岗', employeeId: 'S007', createdAt: now }
     ];
     
     // 4个考勤监督员（用于组成2个固定编组）
     const supervisors = [
-      { id: '11', name: '监督员A', tags: ['supervisor_tag'], phone: '13800003001', status: 'active', employeeId: 'SV001', createdAt: now },
-      { id: '12', name: '监督员B', tags: ['supervisor_tag'], phone: '13800003002', status: 'active', employeeId: 'SV002', createdAt: now },
-      { id: '13', name: '监督员C', tags: ['supervisor_tag'], phone: '13800003003', status: 'active', employeeId: 'SV003', createdAt: now },
-      { id: '14', name: '监督员D', tags: ['supervisor_tag'], phone: '13800003004', status: 'active', employeeId: 'SV004', createdAt: now }
+      { id: '11', name: '监督员A', tags: ['supervisor_tag'], phone: '13800003001', status: '在岗', employeeId: 'SV001', createdAt: now },
+      { id: '12', name: '监督员B', tags: ['supervisor_tag'], phone: '13800003002', status: '在岗', employeeId: 'SV002', createdAt: now },
+      { id: '13', name: '监督员C', tags: ['supervisor_tag'], phone: '13800003003', status: '在岗', employeeId: 'SV003', createdAt: now },
+      { id: '14', name: '监督员D', tags: ['supervisor_tag'], phone: '13800003004', status: '在岗', employeeId: 'SV004', createdAt: now }
     ];
     
     // 保存所有员工
@@ -1303,10 +1328,10 @@ class LocalStorageService {
       
       // 获取不同角色的员工
       const leaders = employees.filter(emp => 
-        emp.tags?.includes('leader_tag') && emp.status === 'active'
+        emp.tags?.includes('leader_tag') && emp.status === '在岗'
       );
       const staff = employees.filter(emp => 
-        emp.tags?.includes('staff_tag') && emp.status === 'active'
+        emp.tags?.includes('staff_tag') && emp.status === '在岗'
       );
       const supervisorGroups = this.getAttendanceSupervisorGroups().filter(g => g.status === 'active');
       
@@ -1613,6 +1638,368 @@ class LocalStorageService {
     }
   }
 
+  // 用户管理相关方法
+  getUsers() {
+    try {
+      const data = localStorage.getItem(this.USERS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('获取用户列表失败:', error);
+      return [];
+    }
+  }
+
+  saveUsers(users) {
+    try {
+      console.log('保存用户列表，用户数量:', users.length);
+      console.log('用户数据:', users);
+      
+      const jsonData = JSON.stringify(users);
+      console.log('序列化后的数据长度:', jsonData.length);
+      
+      localStorage.setItem(this.USERS_KEY, jsonData);
+      console.log('用户数据已保存到localStorage');
+      
+      return true;
+    } catch (error) {
+      console.error('保存用户列表失败:', error);
+      console.error('错误详情:', {
+        message: error.message,
+        stack: error.stack,
+        usersCount: users ? users.length : 'undefined'
+      });
+      return false;
+    }
+  }
+
+  addUser(user) {
+    try {
+      console.log('开始添加用户:', user);
+      const users = this.getUsers();
+      console.log('当前用户列表:', users);
+      
+      const newUser = {
+        ...user,
+        id: user.id || `user_${Date.now()}`,
+        createTime: new Date().toISOString(),
+        lastLoginTime: null,
+        status: 'active'
+      };
+      
+      console.log('准备保存的用户对象:', newUser);
+      users.push(newUser);
+      
+      const saveResult = this.saveUsers(users);
+      console.log('保存用户列表结果:', saveResult);
+      
+      if (saveResult) {
+        console.log('用户添加成功:', newUser);
+        return newUser;
+      } else {
+        console.log('保存用户列表失败');
+        return null;
+      }
+    } catch (error) {
+      console.error('添加用户失败:', error);
+      return null;
+    }
+  }
+
+  updateUser(id, updatedUser) {
+    try {
+      const users = this.getUsers();
+      const index = users.findIndex(user => user.id === id);
+      if (index !== -1) {
+        users[index] = {
+          ...users[index],
+          ...updatedUser,
+          updateTime: new Date().toISOString()
+        };
+        this.saveUsers(users);
+        return users[index];
+      }
+      return null;
+    } catch (error) {
+      console.error('更新用户失败:', error);
+      return null;
+    }
+  }
+
+  deleteUser(id) {
+    try {
+      const users = this.getUsers();
+      const filteredUsers = users.filter(user => user.id !== id);
+      this.saveUsers(filteredUsers);
+      return true;
+    } catch (error) {
+      console.error('删除用户失败:', error);
+      return false;
+    }
+  }
+
+  getUserById(id) {
+    try {
+      const users = this.getUsers();
+      return users.find(user => user.id === id) || null;
+    } catch (error) {
+      console.error('获取用户失败:', error);
+      return null;
+    }
+  }
+
+  getUserByUsername(username) {
+    try {
+      const users = this.getUsers();
+      return users.find(user => user.username === username) || null;
+    } catch (error) {
+      console.error('获取用户失败:', error);
+      return null;
+    }
+  }
+
+  // 用户认证相关方法
+  authenticateUser(username, password) {
+    try {
+      const user = this.getUserByUsername(username);
+      if (user && user.password === password && user.status === 'active') {
+        // 更新最后登录时间
+        this.updateUser(user.id, { lastLoginTime: new Date().toISOString() });
+        return { success: true, user: { ...user, password: undefined } };
+      }
+      return { success: false, message: '用户名或密码错误' };
+    } catch (error) {
+      console.error('用户认证失败:', error);
+      return { success: false, message: '认证失败' };
+    }
+  }
+
+  // 用户会话管理
+  getSessions() {
+    try {
+      const data = localStorage.getItem(this.USER_SESSIONS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('获取会话列表失败:', error);
+      return [];
+    }
+  }
+
+  saveSessions(sessions) {
+    try {
+      localStorage.setItem(this.USER_SESSIONS_KEY, JSON.stringify(sessions));
+      return true;
+    } catch (error) {
+      console.error('保存会话列表失败:', error);
+      return false;
+    }
+  }
+
+  createSession(userId, token) {
+    try {
+      const sessions = this.getSessions();
+      const newSession = {
+        id: `session_${Date.now()}`,
+        userId,
+        token,
+        createTime: new Date().toISOString(),
+        lastActivity: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24小时过期
+      };
+      sessions.push(newSession);
+      this.saveSessions(sessions);
+      return newSession;
+    } catch (error) {
+      console.error('创建会话失败:', error);
+      return null;
+    }
+  }
+
+  validateSession(token) {
+    try {
+      const sessions = this.getSessions();
+      const session = sessions.find(s => s.token === token);
+      if (session && new Date(session.expiresAt) > new Date()) {
+        // 更新最后活动时间
+        session.lastActivity = new Date().toISOString();
+        this.saveSessions(sessions);
+        return { valid: true, session };
+      }
+      return { valid: false };
+    } catch (error) {
+      console.error('验证会话失败:', error);
+      return { valid: false };
+    }
+  }
+
+  removeSession(token) {
+    try {
+      const sessions = this.getSessions();
+      const filteredSessions = sessions.filter(s => s.token !== token);
+      this.saveSessions(filteredSessions);
+      return true;
+    } catch (error) {
+      console.error('移除会话失败:', error);
+      return false;
+    }
+  }
+
+  // 初始化默认管理员账户
+  initializeDefaultAdmin() {
+    try {
+      const users = this.getUsers();
+      if (users.length === 0) {
+        const adminUser = {
+          id: 'admin_001',
+          username: 'admin',
+          password: 'admin123',
+          name: '系统管理员',
+          email: 'admin@example.com',
+          role: 'admin',
+          permissions: ['all'],
+          createTime: new Date().toISOString(),
+          status: 'active'
+        };
+        this.addUser(adminUser);
+        console.log('默认管理员账户已创建');
+      }
+    } catch (error) {
+      console.error('初始化默认管理员失败:', error);
+    }
+  }
+
+  // 根据岗位和轮班规则生成排班表
+  generateScheduleByRules(startDate, endDate) {
+    try {
+      const employees = this.getEmployees();
+      const positions = this.getPositions();
+      const scheduleRules = this.getScheduleRules();
+      const schedules = [];
+      
+      if (positions.length === 0) {
+        console.warn('没有岗位数据，无法生成排班表');
+        return { success: false, message: '没有岗位数据' };
+      }
+      
+      if (scheduleRules.length === 0) {
+        console.warn('没有轮班规则，无法生成排班表');
+        return { success: false, message: '没有轮班规则' };
+      }
+      
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      // 按员工标签分组
+      const employeesByTag = {};
+      employees.forEach(emp => {
+        emp.tags?.forEach(tag => {
+          if (!employeesByTag[tag]) {
+            employeesByTag[tag] = [];
+          }
+          employeesByTag[tag].push(emp);
+        });
+      });
+      
+      // 为每个日期生成排班
+      for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+        const currentDate = date.toISOString().split('T')[0];
+        const dayOfWeek = date.getDay();
+        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+        
+        console.log(`处理日期: ${currentDate}, 星期${dayName}`);
+        
+        // 应用轮班规则
+        const applicableRules = scheduleRules.filter(rule => rule.enabled);
+        
+        for (const rule of applicableRules) {
+          let shouldApply = false;
+          let rulePositions = [];
+          
+          if (rule.type === 'weekly') {
+            const dayPattern = rule.pattern[dayName];
+            if (dayPattern && dayPattern.enabled) {
+              shouldApply = true;
+              rulePositions = dayPattern.positions;
+            }
+          } else if (rule.type === 'daily') {
+            const dayPattern = rule.pattern.everyDay;
+            if (dayPattern && dayPattern.enabled) {
+              shouldApply = true;
+              rulePositions = dayPattern.positions;
+            }
+          }
+          
+          if (shouldApply && rulePositions.length > 0) {
+            console.log(`应用规则: ${rule.name}`);
+            
+            // 为每个岗位生成排班
+            for (const positionId of rulePositions) {
+              const position = positions.find(p => p.id === positionId);
+              if (!position) continue;
+              
+              // 找到符合岗位要求的员工
+              const availableEmployees = [];
+              position.requiredTags?.forEach(tag => {
+                const tagEmployees = employeesByTag[tag] || [];
+                availableEmployees.push(...tagEmployees);
+              });
+              
+              if (availableEmployees.length === 0) {
+                console.warn(`岗位 ${position.name} 没有可用员工`);
+                continue;
+              }
+              
+              // 选择员工（简单轮换）
+              const selectedEmployee = availableEmployees[Math.floor(Math.random() * availableEmployees.length)];
+              
+              // 检查员工是否可用
+              if (!this.isEmployeeAvailable(selectedEmployee.id, currentDate)) {
+                console.log(`${selectedEmployee.name} 在 ${currentDate} 不可用，跳过`);
+                continue;
+              }
+              
+              // 创建排班记录
+              const schedule = {
+                id: `schedule_${currentDate}_${positionId}`,
+                date: currentDate,
+                positionId: positionId,
+                positionName: position.name,
+                assignedPersonId: selectedEmployee.id,
+                assignedPersonName: selectedEmployee.name,
+                dutyType: 'position_based',
+                workHours: rule.workHours || position.workHours,
+                status: 'active',
+                createdAt: new Date().toISOString(),
+                remarks: `${rule.name} - ${position.name}`
+              };
+              
+              schedules.push(schedule);
+              console.log(`创建排班: ${position.name} -> ${selectedEmployee.name}`);
+            }
+          }
+        }
+      }
+      
+      // 保存生成的排班表
+      this.saveDutySchedules(schedules);
+      
+      return {
+        success: true,
+        scheduleCount: schedules.length,
+        startDate,
+        endDate,
+        summary: {
+          totalDays: Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1,
+          positionsUsed: positions.length,
+          rulesApplied: scheduleRules.filter(r => r.enabled).length,
+          employeesUsed: new Set(schedules.map(s => s.assignedPersonId)).size
+        }
+      };
+      
+    } catch (error) {
+      console.error('根据规则生成排班表失败:', error);
+      throw error;
+    }
+  }
 
 }
 
