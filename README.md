@@ -398,5 +398,4 @@ npm run lint
 
 📧 联系方式：[your-email@example.com](mailto:your-email@example.com)
 
-🌐 项目主页：[https://github.com/yourusername/paiban-system](https://github.com/yourusername/paiban-system) t r i g g e r   r e d e p l o y  
- 
+🌐 项目主页：[https://github.com/yourusername/paiban-system](https://github.com/yourusername/paiban-system)
