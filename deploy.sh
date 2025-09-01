@@ -147,6 +147,10 @@ deploy_docker() {
     
     setup_environment
     
+    # 停止并移除旧容器
+    echo "🛑 停止并移除旧容器..."
+    docker-compose down
+    
     # 构建并启动容器
     echo "🔨 构建 Docker 镜像..."
     docker-compose build
