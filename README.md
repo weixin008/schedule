@@ -4,7 +4,15 @@
 
 ## 🚀 快速开始
 
-### 方式一：Docker 一键部署（推荐）
+### 方式一：服务器一键部署（最简单）
+
+**直接在服务器上运行:**
+```bash
+# 一键部署到服务器 (Ubuntu/Debian/CentOS)
+curl -fsSL https://raw.githubusercontent.com/weixin008/schedule/main/quick-deploy.sh | bash
+```
+
+### 方式二：Docker 本地部署
 
 **从 GitHub 克隆并部署:**
 ```bash
