@@ -192,7 +192,7 @@ const cacheStats = ref({
 
 const apiMetricsData = ref([]);
 const logLevel = ref('all');
-const logs = ref([]);
+const logs = ref<any[]>([]);
 
 // 计算属性
 const cacheHitRate = computed(() => {

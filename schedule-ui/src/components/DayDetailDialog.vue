@@ -227,7 +227,7 @@ const conflicts = ref<Conflict[]>([]);
 const positions = ref<Position[]>([]);
 const availableEmployees = ref<Employee[]>([]);
 const replacementDialogVisible = ref(false);
-const selectedSchedule = ref<Schedule | null>(null);
+const selectedSchedule = ref<Schedule | undefined>(undefined);
 
 const quickAddForm = ref({
   positionId: null,
@@ -274,7 +274,7 @@ const fetchDaySchedules = async () => {
       daySchedules.value = daySchedulesData.map(schedule => {
         // 从员工store获取完整的员工信息
         const employeeStore = useEmployeeStore();
-        const employee = employeeStore.employees.find(emp => emp.id === schedule.assignedPersonId);
+        const employee = employeeStore.employees.find((emp: any) => emp.id === schedule.assignedPersonId);
         
         return {
           id: schedule.id || `local_${Date.now()}_${Math.random()}`,
@@ -335,7 +335,7 @@ const fetchAvailableEmployees = async () => {
   try {
     // 直接获取所有在职员工（简化逻辑，避免404错误）
     const response = await apiClient.get('/employees');
-    availableEmployees.value = response.data.filter(emp => emp.status === 'ON_DUTY');
+    availableEmployees.value = response.data.filter((emp: any) => emp.status === 'ON_DUTY');
     console.log(`📋 获取到 ${availableEmployees.value.length} 名可用员工`);
   } catch (error) {
     console.error('获取员工列表失败:', error);

@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { Plus, Edit, Delete, User, Setting } from '@element-plus/icons-vue';
+import { Plus, Edit, Delete, User } from '@element-plus/icons-vue';
 
 defineProps<{
   node: any;
@@ -89,7 +89,7 @@ defineEmits<{
 
 // 获取节点类型文本
 const getNodeTypeText = (type: string) => {
-  const typeMap = {
+  const typeMap: Record<string, string> = {
     'department': '部门',
     'position': '职位',
     'mixed': '部门/职位'
@@ -99,7 +99,7 @@ const getNodeTypeText = (type: string) => {
 
 // 获取层级文本
 const getLevelText = (level: string) => {
-  const levelMap = {
+  const levelMap: Record<string, string> = {
     'high': '高级',
     'medium': '中级',
     'low': '低级'
@@ -109,7 +109,7 @@ const getLevelText = (level: string) => {
 
 // 获取状态文本
 const getStatusText = (status: string) => {
-  const statusMap = {
+  const statusMap: Record<string, string> = {
     'ON_DUTY': '在岗',
     'LEAVE': '请假',
     'BUSINESS_TRIP': '出差',

@@ -28,7 +28,7 @@ api.interceptors.response.use(response => {
     console.warn('API认证失败，请检查后端认证配置')
     localStorage.removeItem('token')
     // 在开发环境下，可以考虑使用模拟数据
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('开发环境：建议临时禁用后端认证或配置正确的token')
     }
   }

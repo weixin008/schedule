@@ -34,7 +34,7 @@
       <el-table-column prop="domain" label="域名" min-width="200" />
       <el-table-column prop="createTime" label="创建时间" width="180" />
       <el-table-column label="操作" width="220" fixed="right">
-        <template #default="{ row }">
+        <template #default>
           <el-button type="primary" link :icon="Edit">编辑</el-button>
           <el-button type="success" link :icon="FolderOpened">目录</el-button>
           <el-button type="warning" link :icon="Document">日志</el-button>
@@ -82,13 +82,13 @@ const websites = ref<Website[]>([
   }
 ])
 
-const statusMap = {
+const statusMap: Record<string, string> = {
   running: '运行中',
   stopped: '已停止',
   error: '异常'
 }
 
-const statusType = {
+const statusType: Record<string, string> = {
   running: 'success',
   stopped: 'info',
   error: 'danger'
