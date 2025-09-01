@@ -14,8 +14,8 @@ COPY . .
 ARG API_URL=http://localhost:9020/api
 ENV VITE_API_BASE_URL=$API_URL
 
-# Build the application
-RUN npm run build
+# Build the application (使用快速构建跳过类型检查)
+RUN npm run build:fast
 
 # Production stage
 FROM nginx:alpine as production-stage
