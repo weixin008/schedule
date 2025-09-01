@@ -1,7 +1,12 @@
 FROM node:20-alpine
 
-# Install wget for health checks
-RUN apk add --no-cache wget
+# Install build dependencies for native modules
+RUN apk add --no-cache \
+    wget \
+    python3 \
+    make \
+    g++ \
+    sqlite
 
 WORKDIR /app
 
