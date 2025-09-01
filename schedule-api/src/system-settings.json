@@ -1,0 +1,7 @@
+{
+  "roleNameMapping": {
+    "admin": "管理员",
+    "manager": "经理",
+    "staff": "员工"
+  }
+} 

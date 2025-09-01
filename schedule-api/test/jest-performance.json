@@ -1,0 +1,15 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": "performance/.*\\.spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "collectCoverageFrom": [
+    "**/*.(t|j)s"
+  ],
+  "coverageDirectory": "../coverage/performance",
+  "testTimeout": 60000,
+  "setupFilesAfterEnv": ["<rootDir>/performance/setup.ts"]
+}
