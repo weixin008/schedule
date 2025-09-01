@@ -29,7 +29,7 @@ import { OrganizationModule } from './organization/organization.module';
     }),
     RedisModule.forRoot({
       type: 'single',
-      url: 'redis://localhost:6379',
+      url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
     }),
     AuthModule,
     UserModule,

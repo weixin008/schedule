@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: schedule-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    networks:
+      - schedule-network
+
   schedule-api:
     build: 
       context: ./schedule-api
@@ -13,10 +25,14 @@ services:
       - PORT=9020
       - JWT_SECRET=${JWT_SECRET:-schedule-jwt-secret-change-in-production}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - schedule_data:/app/data
       - schedule_logs:/app/logs
     restart: unless-stopped
+    depends_on:
+      - redis
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9020/api/health", "||", "exit", "1"]
       interval: 30s
@@ -34,13 +50,13 @@ services:
         - API_URL=${API_URL:-http://localhost:9020/api}
     container_name: schedule-ui
     ports:
-      - "${UI_PORT:-80}:80"
+      - "${UI_PORT:-9010}:80"
     depends_on:
       schedule-api:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health", "||", "exit", "1"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/", "||", "exit", "1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -54,3 +70,4 @@ networks:
 volumes:
   schedule_data:
   schedule_logs:
+  redis_data:
