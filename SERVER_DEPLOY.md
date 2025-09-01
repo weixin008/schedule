@@ -8,6 +8,35 @@
 - Docker Compose 1.29+
 - 至少 2GB RAM，10GB 磁盘空间
 
+### 1.1 中国服务器网络优化 (推荐)
+
+#### 配置 Docker 镜像加速
+```bash
+# 创建 Docker 配置目录
+sudo mkdir -p /etc/docker
+
+# 配置镜像加速器
+sudo tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": [
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://hub-mirror.c.163.com",
+    "https://mirror.baidubce.com"
+  ]
+}
+EOF
+
+# 重启 Docker 服务
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+# 验证加速器配置
+docker info | grep -A 10 "Registry Mirrors"
+```
+
+#### 配置 npm 镜像加速 (已在 Dockerfile 中配置)
+项目已自动配置使用淘宝 npm 镜像和阿里云 Alpine 镜像源，无需额外配置。
+
 ### 2. 一键部署命令
 
 ```bash

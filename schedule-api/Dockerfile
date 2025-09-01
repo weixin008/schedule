@@ -1,5 +1,8 @@
 FROM node:20-alpine
 
+# 使用阿里云镜像源加速
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
 # Install build dependencies for native modules
 RUN apk add --no-cache \
     python3 \
@@ -12,6 +15,9 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+
+# 使用淘宝 npm 镜像加速
+RUN npm config set registry https://registry.npmmirror.com
 
 # Install all dependencies first (including dev dependencies for build)
 RUN npm install --legacy-peer-deps
