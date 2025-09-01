@@ -27,7 +27,7 @@ if [ ! -f ".env" ]; then
     cat > .env << EOF
 # 端口配置
 API_PORT=9020
-UI_PORT=80
+UI_PORT=8080
 
 # JWT 密钥
 JWT_SECRET=schedule-jwt-secret-$(date +%s)
@@ -63,7 +63,7 @@ echo "🎉 部署完成！"
 echo "==============="
 echo ""
 echo "📍 访问地址:"
-echo "   前端界面: http://$SERVER_IP"
+echo "   前端界面: http://$SERVER_IP:8080"
 echo "   后端API:  http://$SERVER_IP:9020/api"
 echo ""
 echo "👤 默认账号:"

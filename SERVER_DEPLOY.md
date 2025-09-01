@@ -229,10 +229,23 @@ sudo systemctl restart docker
 ### 9. 故障排查
 
 #### 常见问题
-1. **端口被占用**
+1. **端口被占用 (Port 80 already in use)**
    ```bash
+   # 检查端口占用情况
    sudo netstat -tulpn | grep :80
    sudo lsof -i :80
+   
+   # 解决方案1: 使用不同端口 (推荐)
+   # 使用 docker-compose.minimal.yml 文件，UI端口改为8080
+   docker-compose -f docker-compose.minimal.yml up -d
+   # 访问地址变为: http://your-server-ip:8080
+   
+   # 解决方案2: 停止占用端口80的服务 (如果不需要)
+   sudo systemctl stop nginx
+   sudo systemctl disable nginx
+   
+   # 解决方案3: 修改现有配置
+   # 编辑 docker-compose.yml，将 "80:80" 改为 "8080:80"
    ```
 
 2. **Docker 服务未启动**
