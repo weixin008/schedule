@@ -45,6 +45,10 @@ start_services() {
     check_docker
     setup_env
     
+    # 停止并移除旧容器
+    echo "🛑 停止并移除旧容器..."
+    docker-compose down
+
     # 构建并启动服务
     echo "🔨 构建 Docker 镜像..."
     docker-compose build --no-cache
@@ -127,6 +131,10 @@ update_services() {
         git pull
     fi
     
+    # 停止并移除旧容器
+    echo "🛑 停止并移除旧容器..."
+    docker-compose down
+
     # 重新构建并启动
     echo "🔨 重新构建镜像..."
     docker-compose build --no-cache
