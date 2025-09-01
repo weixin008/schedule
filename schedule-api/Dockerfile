@@ -2,8 +2,8 @@ FROM node:20-alpine
 
 # Install build dependencies for native modules
 RUN apk add --no-cache \
-    wget \
     python3 \
+    py3-setuptools \
     make \
     g++ \
     sqlite
