@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build:fast
 
 # Temporary: Replace localhost with public IP
-RUN sed -i 's|http://localhost:9020|http://117.72.205.253:9020|g' /app/dist/index.html /app/dist/assets/*.js
+RUN sed -i 's#http://localhost:9020#http://117.72.205.253:9020#g' /app/dist/index.html /app/dist/assets/*.js
 
 # List build output to verify
 RUN ls -la /app/dist
