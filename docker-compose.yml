@@ -47,7 +47,7 @@ services:
       context: ./schedule-ui
       dockerfile: Dockerfile
       args:
-        - API_URL=http://117.72.205.253:9020/api
+        API_URL: ${API_URL:-http://localhost:9020/api}
     container_name: schedule-ui
     ports:
       - "${UI_PORT:-9010}:80"
