@@ -17,6 +17,9 @@ COPY . .
 # Build the application (使用快速构建跳过类型检查)
 RUN npm run build:fast
 
+# Temporary: Force replace API URL
+RUN sed -i 's|http://localhost:9020|https://paiban.66ai.com.cn/api|g' /app/dist/index.html /app/dist/assets/*.js
+
 # List build output to verify
 RUN ls -la /app/dist
 
