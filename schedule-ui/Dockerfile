@@ -7,14 +7,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
-# Copy source code
-COPY . .
-
 # Build argument for API URL
-
-
 ARG API_URL=http://localhost:9020/api
 ENV VITE_API_BASE_URL=$API_URL
+
+# Copy source code
+COPY . .
 
 # Build the application (使用快速构建跳过类型检查)
 RUN npm run build:fast
