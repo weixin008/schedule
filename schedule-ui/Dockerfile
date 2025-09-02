@@ -13,11 +13,11 @@ COPY . .
 # Build argument for API URL
 
 
+ARG API_URL=http://localhost:9020/api
+ENV VITE_API_BASE_URL=$API_URL
+
 # Build the application (使用快速构建跳过类型检查)
 RUN npm run build:fast
-
-# Temporary: Replace localhost with public IP
-RUN sed -i 's#http://localhost:9020#http://117.72.205.253:9020#g' /app/dist/index.html /app/dist/assets/*.js
 
 # List build output to verify
 RUN ls -la /app/dist
