@@ -10,6 +10,7 @@ import Login from '@/views/Login.vue';
 import Register from '@/views/Register.vue';
 import SystemSettings from '@/views/SystemSettings.vue';
 import { useAuthStore } from './stores/auth';
+import KanbanView from '@/views/KanbanView.vue'; // Import the new component
 
 const routes = [
   {
@@ -21,6 +22,12 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: Register,
+  },
+  {
+    path: '/kanban',
+    name: 'KanbanView',
+    component: KanbanView,
+    meta: { requiresAuth: false }, // This page does not require authentication
   },
   {
     path: '/',
