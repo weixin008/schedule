@@ -17,6 +17,9 @@ ENV VITE_API_BASE_URL=$API_URL
 # Build the application (使用快速构建跳过类型检查)
 RUN npm run build:fast
 
+# List build output to verify
+RUN ls -la /app/dist
+
 # Production stage
 FROM nginx:alpine as production-stage
 
