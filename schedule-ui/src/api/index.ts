@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:9020/api', // 修改为后端服务端口
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9020/api', // 使用环境变量或默认值
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'

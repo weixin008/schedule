@@ -39,7 +39,7 @@
 </template>
 
 <script>
-import apiService from '@/services/apiService'; // 假设apiService在src/services/apiService.js
+import apiService from '@/api';
 
 export default {
   name: 'KanbanView',
