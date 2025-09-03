@@ -8,8 +8,8 @@ COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
 # Build argument for API URL
-ARG API_URL=http://localhost:9020/api
-ENV VITE_API_BASE_URL=$API_URL
+# ARG API_URL=http://localhost:9020/api
+ENV VITE_API_BASE_URL=https://paiban.66ai.com.cn/api
 
 # Copy source code
 COPY . .
